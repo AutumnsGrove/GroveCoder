@@ -5,17 +5,29 @@
 ---
 
 ## Project Purpose
-[Fill in: What this project does - 1-2 sentences]
+GroveCoder is an autonomous PR remediation agent that monitors pull requests for review comments from Claude's GitHub integration, parses the feedback, and autonomously fixes identified issues using an agentic loop.
 
 ## Tech Stack
-[Fill in: Technologies, frameworks, and languages used]
-- Language:
-- Framework:
-- Key Libraries:
-- Package Manager:
+- Language: TypeScript (ES2022, NodeNext modules)
+- Runtime v1: GitHub Actions (Node.js)
+- Runtime v2: Cloudflare Workers (planned)
+- Key Libraries: @anthropic-ai/sdk, @octokit/rest, vitest
+- Package Manager: npm
+- Testing: Vitest
 
 ## Architecture Notes
-[Fill in: Key architectural decisions, patterns, or structure]
+Three-layer architecture for portability:
+1. **Trigger Layer** (`src/triggers/`) - Event ingestion (Actions workflow or CF Worker webhook)
+2. **Agent Core** (`src/agent/`) - Pure TypeScript agentic loop, runtime-agnostic
+3. **Tool Executor** (`src/tools/`) - GitHub API for file ops, shell for commands
+
+Key design decisions:
+- Use GitHub API for file operations (portability over filesystem)
+- Prompt caching for cost optimization (~25% savings)
+- Default to Sonnet, escalate to Opus (~5% of cases)
+- Hard safety limits: 25 iterations, $2 cost cap, 15min timeout
+
+See `docs/grovecoder-spec.md` for full architecture details.
 
 ---
 

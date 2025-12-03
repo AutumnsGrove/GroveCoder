@@ -1,12 +1,11 @@
 # GroveCoder TODO
 
-> **Current Focus:** Phase 1 - Foundation (MVP)
-
 ## Phase 1: Foundation (MVP)
 
 ### Project Setup
-- [ ] Initialize npm project with TypeScript
-- [ ] Configure ESLint + Prettier
+- [ ] Initialize npm project
+- [ ] Configure TypeScript (ES2022, NodeNext)
+- [ ] Set up ESLint + Prettier
 - [ ] Set up Vitest for testing
 - [ ] Install dependencies: @anthropic-ai/sdk, @octokit/rest
 
@@ -19,12 +18,12 @@
 
 ### Review Parser (`src/agent/parser.ts`)
 - [ ] Detect Claude review format signatures
-- [ ] Parse "Issues & Concerns" section
+- [ ] Parse "🔍 Issues & Concerns" section
 - [ ] Extract issue severity, title, description
-- [ ] Extract file paths and line numbers
+- [ ] Extract file paths and line numbers from `**Location:**`
 - [ ] Extract code suggestions from code blocks
-- [ ] Parse "Recommendations Summary" priorities
-- [ ] Parse final recommendation
+- [ ] Parse "✅ Recommendations Summary" priorities
+- [ ] Parse final recommendation (approve/request changes)
 - [ ] Calculate complexity estimate
 
 ### Claude Client (`src/claude/client.ts`)
@@ -88,12 +87,12 @@
 - [ ] Token budget tracking
 - [ ] Cost tracking with $2 cap
 - [ ] Execution timeout (15 min)
-- [ ] Diff size limits
+- [ ] Diff size limits (500 lines/file, 20 files)
 - [ ] Protected branch check
 - [ ] Protected file patterns
 
 ### Status Updates
-- [ ] Post "Working on fixes..." when starting
+- [ ] Post "Working on fixes..." comment when starting
 - [ ] Post progress updates during long sessions
 - [ ] Post summary comment when done
 - [ ] Apply labels (working, completed, needs-help)
@@ -120,36 +119,61 @@
 - [ ] `web_fetch` - fetch URLs for context
 - [ ] `request_human_help` - detailed handoff
 
+### Human Help Tool
+- [ ] Full context dump in comment
+- [ ] Attempts summary
+- [ ] Blocker categorization
+- [ ] Suggested next steps
+- [ ] Files modified list
+- [ ] Debug info (tokens, time, model)
+- [ ] Label management
+
 ### Documentation
+- [ ] README with setup instructions
 - [ ] ARCHITECTURE.md
 - [ ] TOOLS.md reference
 - [ ] CONTRIBUTING.md
 
+### Test Suite
+- [ ] Parser edge cases
+- [ ] Safety limit enforcement
+- [ ] Tool execution mocks
+- [ ] Config validation
+- [ ] Error scenarios
+
 ---
 
 ## Phase 4: Multi-Model Support
+
 - [ ] Abstract LLM client interface
 - [ ] Kimi K2 client implementation
 - [ ] Model selection in config
-- [ ] Fallback logic (cheap -> expensive)
+- [ ] Fallback logic (cheap → expensive)
+- [ ] Per-model token/cost tracking
 
 ---
 
 ## Phase 5: GitHub App (Public Release)
+
 - [ ] Register GitHub App
 - [ ] OAuth installation flow
 - [ ] Webhook receiver endpoint
 - [ ] Multi-tenant config storage
 - [ ] Usage tracking per installation
+- [ ] Rate limiting per user
 - [ ] Landing page
+- [ ] Marketplace listing
 
 ---
 
 ## Phase 6: Cloudflare Migration
-- [ ] Worker webhook handler
+
+- [ ] Worker webhook handler (`src/triggers/webhook.ts`)
 - [ ] Adapt file ops to GitHub API only
 - [ ] Evaluate shell command alternatives
 - [ ] Durable Objects for state (if needed)
+- [ ] Cloudflare Workflows for durability
+- [ ] Or: hybrid Worker + Actions for compute
 
 ---
 
@@ -158,4 +182,3 @@
 - Verify exact Claude bot username on first real test
 - Keep agent core runtime-agnostic for migration
 - Log everything for debugging early issues
-- See `docs/` for detailed specifications

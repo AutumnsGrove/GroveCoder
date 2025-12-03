@@ -1,0 +1,45 @@
+{
+  "name": "grovecoder",
+  "version": "0.1.0",
+  "description": "An autonomous PR remediation agent that fixes issues identified by Claude's GitHub integration",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint src/",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "github",
+    "pr-review",
+    "automation",
+    "claude",
+    "ai-agent"
+  ],
+  "author": "AutumnsGrove",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AutumnsGrove/GroveCoder"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "@octokit/rest": "^21.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.0",
+    "eslint": "^9.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.0.0"
+  }
+}
