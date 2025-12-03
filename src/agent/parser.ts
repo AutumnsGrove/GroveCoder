@@ -19,14 +19,22 @@ const CLAUDE_REVIEW_SIGNATURES = [
 ];
 
 export function isClaudeReview(content: string): boolean {
+  // Check for explicit GroveCoder trigger
+  if (/@grovecoder/i.test(content) || /\bgrovecoder\b/i.test(content)) {
+    return true;
+  }
+
+  // Check for Claude review signatures
   const hasSignature = CLAUDE_REVIEW_SIGNATURES.some((sig) =>
     content.includes(sig)
   );
 
-  // Also check for typical Claude review patterns
+  // Check for typical review patterns (Claude or human)
   const hasReviewPattern =
     /(?:critical|major|minor|suggestion).*?:.*?(?:issue|concern|problem)/i.test(content) ||
-    /(?:approve|request.?changes|needs.?discussion)/i.test(content);
+    /(?:approve|request.?changes|needs.?discussion)/i.test(content) ||
+    /(?:needs?.?fix|please.?fix|should.?fix|fix.?this)/i.test(content) ||
+    /(?:security|vulnerability|bug|error).{0,50}(?:found|detected|issue)/i.test(content);
 
   return hasSignature || hasReviewPattern;
 }
