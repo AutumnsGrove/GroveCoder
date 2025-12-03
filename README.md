@@ -167,7 +167,10 @@ grovecoder/
 - [Full Specification](docs/grovecoder-spec.md)
 - [Spec Addendum](docs/grovecoder-spec-addendum.md)
 - [Development Kickoff](docs/grovecoder-kickoff.md)
-- [Phase TODOs](docs/TODO.md)
+- [Architecture](docs/ARCHITECTURE.md)
+- [Tools Reference](docs/TOOLS.md)
+- [Contributing](docs/CONTRIBUTING.md)
+- [Task Tracking](TODOS.md)
 
 ## License
 
