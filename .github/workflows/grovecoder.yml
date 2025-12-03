@@ -29,6 +29,7 @@ jobs:
       contents: write
       pull-requests: write
       issues: write
+      checks: write
 
     timeout-minutes: 15
 

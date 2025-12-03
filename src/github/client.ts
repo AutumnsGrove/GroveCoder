@@ -322,4 +322,73 @@ export class GitHubClient {
       headSha: prDetails.head.sha,
     };
   }
+
+  /**
+   * Create a GitHub Check Run (shows in PR status section)
+   */
+  async createCheckRun(
+    ctx: RepoContext,
+    name: string,
+    headSha: string,
+    status: 'queued' | 'in_progress' | 'completed' = 'in_progress'
+  ): Promise<number> {
+    logger.debug('Creating check run', { ...ctx, name, headSha, status });
+
+    return withRetry(async () => {
+      try {
+        const response = await this.octokit.checks.create({
+          owner: ctx.owner,
+          repo: ctx.repo,
+          name,
+          head_sha: headSha,
+          status,
+          started_at: new Date().toISOString(),
+        });
+
+        logger.info('Check run created', { checkRunId: response.data.id });
+        return response.data.id;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        throw new ApiError(`Failed to create check run: ${message}`, undefined, 'github');
+      }
+    });
+  }
+
+  /**
+   * Update a GitHub Check Run with progress
+   */
+  async updateCheckRun(
+    ctx: RepoContext,
+    checkRunId: number,
+    updates: {
+      status?: 'queued' | 'in_progress' | 'completed';
+      conclusion?: 'success' | 'failure' | 'neutral' | 'cancelled' | 'skipped' | 'timed_out' | 'action_required';
+      output?: {
+        title: string;
+        summary: string;
+        text?: string;
+      };
+    }
+  ): Promise<void> {
+    logger.debug('Updating check run', { ...ctx, checkRunId, updates });
+
+    return withRetry(async () => {
+      try {
+        await this.octokit.checks.update({
+          owner: ctx.owner,
+          repo: ctx.repo,
+          check_run_id: checkRunId,
+          ...updates,
+          ...(updates.status === 'completed' && {
+            completed_at: new Date().toISOString(),
+          }),
+        });
+
+        logger.info('Check run updated', { checkRunId, status: updates.status });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        throw new ApiError(`Failed to update check run: ${message}`, undefined, 'github');
+      }
+    });
+  }
 }
