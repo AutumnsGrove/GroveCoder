@@ -2,7 +2,7 @@
  * Claude review comment parser for GroveCoder
  */
 
-import { logger, ParseError } from '../utils/index.js';
+import { logger } from '../utils/index.js';
 import type { ParsedReview, ReviewIssue, IssueSeverity } from './types.js';
 
 const CLAUDE_REVIEW_SIGNATURES = [
@@ -269,7 +269,7 @@ function estimateComplexity(issues: ReviewIssue[]): ParsedReview['complexityEsti
   return 'low';
 }
 
-export function validateReview(review: ParsedReview): void {
+export function validateReview(_review: ParsedReview): void {
   // Accept all reviews from Claude - even if we can't parse specific issues,
   // the agent can still work with the raw content
   // This enables fully automated fixing of any Claude review
