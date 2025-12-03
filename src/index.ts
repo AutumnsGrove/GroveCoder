@@ -4,12 +4,38 @@
  * Entry point for the GitHub Actions trigger.
  */
 
+import { logger, isGroveCoderError, formatError } from './utils/index.js';
+import { handleActionsEvent } from './triggers/actions.js';
+
 export async function main(): Promise<void> {
-  console.log('GroveCoder starting...');
-  // TODO: Implement main entry point
+  logger.info('GroveCoder starting...');
+
+  try {
+    await handleActionsEvent();
+    logger.info('GroveCoder finished');
+  } catch (error) {
+    if (isGroveCoderError(error)) {
+      logger.error('GroveCoder error', {
+        code: error.code,
+        message: error.message,
+        recoverable: error.recoverable,
+      });
+    } else {
+      logger.error('Unexpected error', { error: formatError(error) });
+    }
+    process.exitCode = 1;
+  }
 }
 
 // Run if executed directly
-if (import.meta.url === `file://${process.argv[1]}`) {
-  main().catch(console.error);
-}
+main().catch((error) => {
+  console.error('Fatal error:', error);
+  process.exit(1);
+});
+
+// Export modules for programmatic use
+export * from './agent/index.js';
+export * from './claude/index.js';
+export * from './github/index.js';
+export * from './tools/index.js';
+export * from './utils/index.js';

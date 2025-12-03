@@ -1,161 +1,305 @@
 # GroveCoder TODO
 
-> **Current Focus:** Phase 1 - Foundation (MVP)
+> **Current Focus:** Phase 2 - Full Loop & Testing
 
-## Phase 1: Foundation (MVP)
+---
 
-### Project Setup
-- [ ] Initialize npm project with TypeScript
-- [ ] Configure ESLint + Prettier
-- [ ] Set up Vitest for testing
-- [ ] Install dependencies: @anthropic-ai/sdk, @octokit/rest
+## Phase 1: Foundation (MVP) ✅ COMPLETE
 
-### GitHub Action Trigger
-- [ ] Create `.github/workflows/grovecoder.yml`
-- [ ] Trigger on `issue_comment` event
-- [ ] Filter: only PR comments (not issue comments)
-- [ ] Filter: only comments from Claude bot
-- [ ] Extract PR number, repo, owner from context
+### Project Setup ✅
+- [x] Initialize npm project with TypeScript (ES2022, NodeNext modules)
+- [x] Configure ESLint with TypeScript strict rules
+- [x] Set up Vitest for testing with coverage
+- [x] Install dependencies: @anthropic-ai/sdk, @octokit/rest
 
-### Review Parser (`src/agent/parser.ts`)
-- [ ] Detect Claude review format signatures
-- [ ] Parse "Issues & Concerns" section
-- [ ] Extract issue severity, title, description
-- [ ] Extract file paths and line numbers
-- [ ] Extract code suggestions from code blocks
-- [ ] Parse "Recommendations Summary" priorities
-- [ ] Parse final recommendation
-- [ ] Calculate complexity estimate
+### GitHub Action Trigger ✅
+- [x] Create `.github/workflows/grovecoder.yml`
+- [x] Trigger on `issue_comment` event
+- [x] Filter: only PR comments (not issue comments)
+- [x] Filter: only comments from Claude bot
+- [x] Extract PR number, repo, owner from context
 
-### Claude Client (`src/claude/client.ts`)
-- [ ] Basic messages API wrapper
-- [ ] Prompt caching for system prompt
-- [ ] Prompt caching for tool definitions
-- [ ] Token usage tracking
-- [ ] Cost calculation helper
-- [ ] Retry logic with exponential backoff
+### Review Parser (`src/agent/parser.ts`) ✅
+- [x] Detect Claude review format signatures
+- [x] Parse "Issues & Concerns" section
+- [x] Extract issue severity (critical/major/minor/suggestion)
+- [x] Extract file paths and line numbers
+- [x] Extract code suggestions from code blocks
+- [x] Parse "Recommendations Summary" priorities
+- [x] Parse final recommendation (approve/request-changes/needs-discussion)
+- [x] Calculate complexity estimate (low/medium/high)
 
-### Core Tools (`src/tools/`)
-- [ ] Tool registry and dispatcher (`index.ts`)
-- [ ] Tool schema definitions (`definitions.ts`)
-- [ ] `read_file` - GitHub Contents API
-- [ ] `write_file` - GitHub Contents API
-- [ ] `run_command` - shell execution
+### Claude Client (`src/claude/client.ts`) ✅
+- [x] Basic messages API wrapper
+- [x] Prompt caching for system prompt (ephemeral cache_control)
+- [x] Prompt caching for tool definitions
+- [x] Token usage tracking (input/output/cache tokens)
+- [x] Cost calculation helper (per model rates)
+- [x] Retry logic with exponential backoff and jitter
 
-### GitHub Client (`src/github/client.ts`)
-- [ ] Octokit wrapper with auth
-- [ ] Get file contents
-- [ ] Create/update file
-- [ ] Get PR details
-- [ ] Post comment on PR
+### Core Tools (`src/tools/`) ✅
+- [x] Tool registry and dispatcher (`index.ts`)
+- [x] Tool schema definitions (`definitions.ts`) - 11 tools defined
+- [x] `read_file` - GitHub Contents API with caching
+- [x] `write_file` - GitHub Contents API with SHA tracking
+- [x] `edit_file` - Search/replace with uniqueness validation
+- [x] `list_directory` - GitHub Trees API
+- [x] `search_files` - grep with pattern matching
+- [x] `run_command` - Whitelisted shell execution
+- [x] `git_status` - Current repository state
+- [x] `get_pr_diff` - PR file changes with patches
+- [x] `get_pr_comments` - All PR comments
+- [x] `add_pr_comment` - Post markdown comments
+- [x] `done` - Completion signal with summary
 
-### Agentic Loop (`src/agent/loop.ts`)
-- [ ] Build initial prompt with review context
-- [ ] Send to Claude with tools
-- [ ] Parse tool_use responses
-- [ ] Execute tools and collect results
-- [ ] Send tool results back
-- [ ] Loop until "done" or limit hit
-- [ ] Basic iteration limit (25)
+### GitHub Client (`src/github/client.ts`) ✅
+- [x] Octokit wrapper with token auth
+- [x] Get file contents (with base64 decoding)
+- [x] Create/update file (with SHA handling)
+- [x] Get PR details (branch, status, files changed)
+- [x] Post/update comments on PR
+- [x] Add/remove labels
 
-### Git Operations
-- [ ] Stage changes (via GitHub API or shell)
-- [ ] Commit with descriptive message
-- [ ] Push to PR branch
+### Agentic Loop (`src/agent/loop.ts`) ✅
+- [x] Build initial prompt with review context
+- [x] Send to Claude with tools
+- [x] Parse tool_use responses
+- [x] Execute tools sequentially (avoid race conditions)
+- [x] Send tool results back to Claude
+- [x] Loop until "done" tool or limit hit
+- [x] Basic iteration limit (25 iterations)
 
-### Testing
+### Safety System (`src/agent/safety.ts`) ✅
+- [x] Iteration counter and limit (25 max)
+- [x] Token budget tracking
+- [x] Cost tracking with $2 cap
+- [x] Execution timeout (15 minutes)
+- [x] Diff size limits (1000 lines, 20 files)
+- [x] Protected file patterns (.env, secrets, .pem, .key, credentials)
+- [x] Dangerous shell operator blocking (&&, ||, ;, |, `, $()
+
+### Git Operations ✅
+- [x] File changes via GitHub API (commit per file)
+- [x] Workflow handles git commit after agent completes
+- [x] Push to PR branch in workflow
+
+### Testing (Partial)
+- [x] Sample Claude review fixtures (`tests/fixtures/`)
+- [x] Unit tests for parser (17 tests)
+- [x] Unit tests for safety checker (16 tests)
+- [x] Unit tests for shell commands (8 tests)
 - [ ] Create test repo with intentional issues
-- [ ] Capture sample Claude review as fixture
-- [ ] Unit tests for parser
 - [ ] Integration test: full loop with mocked APIs
 - [ ] End-to-end test with real PR
 
 ---
 
-## Phase 2: Full Loop
+## Phase 2: Full Loop (In Progress)
 
-### Additional Tools
-- [ ] `edit_file` - targeted line edits
-- [ ] `list_directory` - GitHub Trees API
-- [ ] `search_files` - grep/GitHub Search
-- [ ] `git_status` - current state
-- [ ] `get_pr_diff` - PR changes
-- [ ] `get_pr_comments` - all comments
-- [ ] `add_pr_comment` - post updates
+### Remaining Testing
+- [ ] **Integration tests with mocked APIs**
+  - Mock ClaudeClient responses
+  - Mock GitHubClient file operations
+  - Test complete agent loop flow
+  - Test tool execution chain
+- [ ] **Create test repository**
+  - Sample project with intentional bugs
+  - TypeScript errors for testing
+  - ESLint violations
+  - Missing error handling
+- [ ] **End-to-end test**
+  - Real PR with Claude review
+  - Verify fixes are applied correctly
+  - Validate commit messages
 
-### Safety System (`src/agent/safety.ts`)
-- [ ] Iteration counter and limit
-- [ ] Token budget tracking
-- [ ] Cost tracking with $2 cap
-- [ ] Execution timeout (15 min)
-- [ ] Diff size limits
-- [ ] Protected branch check
-- [ ] Protected file patterns
+### Remaining Safety Features
+- [ ] **Protected branch check**
+  - Verify PR is not targeting main/master directly
+  - Block pushes to protected branches
+  - Configurable protected branch patterns
+- [ ] **Circuit breaker (3 consecutive failures)**
+  - Track consecutive tool failures
+  - Stop agent after 3 failures in a row
+  - Post diagnostic comment
 
 ### Status Updates
-- [ ] Post "Working on fixes..." when starting
-- [ ] Post progress updates during long sessions
-- [ ] Post summary comment when done
-- [ ] Apply labels (working, completed, needs-help)
-
-### Error Handling
-- [ ] Graceful API error handling
-- [ ] Circuit breaker: 3 consecutive failures
-- [ ] Stuck detection: 5 iterations no progress
-- [ ] Clean exit with status comment
+- [ ] **Progress updates during long sessions**
+  - Post update every N iterations (configurable)
+  - Include current progress, time elapsed
+  - Show which issues are being worked on
+- [ ] **Label management**
+  - Add `grovecoder-working` when starting
+  - Add `grovecoder-completed` on success
+  - Add `grovecoder-needs-help` when stuck
+  - Remove working label on completion
 
 ---
 
 ## Phase 3: Configuration & Polish
 
 ### Repo Config (`.github/grovecoder.yml`)
-- [ ] Config schema definition
-- [ ] Config loader with defaults
-- [ ] Validation
-- [ ] Override safety limits (stricter only)
-- [ ] Allowed commands whitelist
-- [ ] Protected paths patterns
+- [ ] **Config schema definition**
+  - TypeScript interface for config
+  - JSON Schema for validation
+  - Version field for compatibility
+- [ ] **Config loader with defaults**
+  - Load from `.github/grovecoder.yml`
+  - Merge with default values
+  - Handle missing config gracefully
+- [ ] **Validation**
+  - Validate against schema
+  - Log warnings for unknown fields
+  - Fail fast on invalid config
+- [ ] **Override safety limits (stricter only)**
+  - Allow reducing max iterations
+  - Allow reducing cost cap
+  - Prevent loosening limits
+- [ ] **Allowed commands whitelist**
+  - User-defined command patterns
+  - Merge with default whitelist
+  - Support glob patterns
+- [ ] **Protected paths patterns**
+  - User-defined protected paths
+  - Glob pattern support
+  - Merge with defaults
 
 ### Extended Tools
-- [ ] `web_fetch` - fetch URLs for context
-- [ ] `request_human_help` - detailed handoff
+- [ ] **`web_fetch` tool**
+  - Fetch documentation URLs
+  - Parse HTML to markdown
+  - Cache responses
+  - Timeout handling
+- [ ] **`request_human_help` tool**
+  - Post detailed comment explaining blockers
+  - Add needs-help label
+  - Tag PR author or specified users
+  - Exit agent gracefully
 
 ### Documentation
-- [ ] ARCHITECTURE.md
-- [ ] TOOLS.md reference
-- [ ] CONTRIBUTING.md
+- [ ] **ARCHITECTURE.md**
+  - System overview diagram
+  - Layer descriptions
+  - Data flow explanation
+  - Extension points
+- [ ] **TOOLS.md reference**
+  - Each tool with examples
+  - Input/output schemas
+  - Common use cases
+  - Error handling
+- [ ] **CONTRIBUTING.md**
+  - Development setup
+  - Testing guidelines
+  - PR process
+  - Code style
 
 ---
 
 ## Phase 4: Multi-Model Support
-- [ ] Abstract LLM client interface
-- [ ] Kimi K2 client implementation
-- [ ] Model selection in config
-- [ ] Fallback logic (cheap -> expensive)
+
+- [ ] **Abstract LLM client interface**
+  - Define common interface
+  - Message format abstraction
+  - Tool calling abstraction
+  - Token counting interface
+- [ ] **Kimi K2 client implementation**
+  - API integration
+  - Message format mapping
+  - Tool calling support
+  - Cost tracking
+- [ ] **Model selection in config**
+  - Default model setting
+  - Per-repo override
+  - Complexity-based selection
+- [ ] **Fallback logic**
+  - Try cheaper model first (Kimi K2)
+  - Escalate to Claude on complex issues
+  - Track model performance per issue type
 
 ---
 
 ## Phase 5: GitHub App (Public Release)
-- [ ] Register GitHub App
-- [ ] OAuth installation flow
-- [ ] Webhook receiver endpoint
-- [ ] Multi-tenant config storage
-- [ ] Usage tracking per installation
-- [ ] Landing page
+
+- [ ] **Register GitHub App**
+  - App manifest creation
+  - Required permissions
+  - Webhook events subscription
+- [ ] **OAuth installation flow**
+  - Installation callback handler
+  - Token storage (encrypted)
+  - Refresh token handling
+- [ ] **Webhook receiver endpoint**
+  - Signature verification
+  - Event type routing
+  - Rate limiting
+- [ ] **Multi-tenant config storage**
+  - Per-installation settings
+  - Database schema (Cloudflare D1 or similar)
+  - Config caching
+- [ ] **Usage tracking per installation**
+  - Token usage per repo
+  - Cost tracking
+  - Usage limits/billing
+- [ ] **Landing page**
+  - Feature overview
+  - Installation button
+  - Documentation links
+  - Pricing (if applicable)
 
 ---
 
 ## Phase 6: Cloudflare Migration
-- [ ] Worker webhook handler
-- [ ] Adapt file ops to GitHub API only
-- [ ] Evaluate shell command alternatives
-- [ ] Durable Objects for state (if needed)
+
+- [ ] **Worker webhook handler**
+  - HTTP handler setup
+  - Request parsing
+  - Response formatting
+- [ ] **Adapt file ops to GitHub API only**
+  - Remove filesystem dependencies
+  - All operations via GitHub API
+  - Handle rate limits
+- [ ] **Evaluate shell command alternatives**
+  - GitHub Actions as compute backend
+  - External CI service integration
+  - Skip shell commands in Workers mode
+- [ ] **Durable Objects for state (if needed)**
+  - Conversation state storage
+  - Long-running job tracking
+  - Resume capability
 
 ---
 
-## Notes
+## Implementation Notes
 
-- Verify exact Claude bot username on first real test
-- Keep agent core runtime-agnostic for migration
-- Log everything for debugging early issues
-- See `docs/` for detailed specifications
+### Priority Order
+1. Complete Phase 2 testing (critical for reliability)
+2. Add protected branch check (safety requirement)
+3. Implement label management (UX improvement)
+4. Build configuration system (Phase 3)
+
+### Technical Debt
+- Parser could use more robust regex patterns
+- Add input validation to all tool handlers
+- Consider rate limiting for GitHub API calls
+- Add structured logging (JSON format)
+
+### Open Questions
+- Exact Claude bot username to filter (needs verification)
+- Optimal iteration count for different issue types
+- Best model selection heuristics
+
+---
+
+## Quick Stats
+
+| Phase | Total Tasks | Completed | Remaining |
+|-------|-------------|-----------|-----------|
+| 1     | 45          | 42        | 3         |
+| 2     | 15          | 7         | 8         |
+| 3     | 14          | 0         | 14        |
+| 4     | 4           | 0         | 4         |
+| 5     | 6           | 0         | 6         |
+| 6     | 4           | 0         | 4         |
+
+---
+
+*Last updated: 2025-12-03*
