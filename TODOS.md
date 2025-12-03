@@ -1,6 +1,6 @@
 # GroveCoder TODO
 
-> **Current Focus:** Phase 4 - Multi-Model Support (Next)
+> **Current Focus:** Phase 5 - GitHub App (Future) / Testing & Publication
 
 ---
 
@@ -198,23 +198,23 @@
 
 ---
 
-## Phase 4: Multi-Model Support
+## Phase 4: Multi-Model Support ✅ COMPLETE
 
-- [ ] **Abstract LLM client interface**
-  - Define common interface
-  - Message format abstraction
-  - Tool calling abstraction
+- [x] **Abstract LLM client interface**
+  - Define common interface (`src/llm/interface.ts`)
+  - Message format abstraction (`src/llm/types.ts`)
+  - Tool calling abstraction (OpenAI-compatible format)
   - Token counting interface
-- [ ] **Kimi K2 client implementation**
-  - API integration
-  - Message format mapping
-  - Tool calling support
+- [x] **Kimi K2 client implementation**
+  - API integration (Moonshot API at api.moonshot.cn/v1)
+  - Message format mapping (OpenAI-compatible)
+  - Tool calling support (function calling)
   - Cost tracking
-- [ ] **Model selection in config**
-  - Default model setting
-  - Per-repo override
-  - Complexity-based selection
-- [ ] **Fallback logic**
+- [x] **Model selection in config**
+  - Default model setting (`config.model.provider`)
+  - Per-repo override via `.github/grovecoder.yml`
+  - Model ID selection (`config.model.model`)
+- [ ] **Fallback logic** (deferred to future)
   - Try cheaper model first (Kimi K2)
   - Escalate to Claude on complex issues
   - Track model performance per issue type
@@ -304,17 +304,18 @@
 | 1     | 45          | 42        | 3*        |
 | 2     | 15          | 13        | 2*        |
 | 3     | 15          | 15        | 0         |
-| 4     | 4           | 0         | 4         |
+| 4     | 4           | 3         | 1**       |
 | 5     | 6           | 0         | 6         |
 | 6     | 4           | 0         | 4         |
 
 *\*Remaining Phase 1/2 tasks are E2E testing (deferred)*
+*\*\*Remaining Phase 4 task is automatic fallback logic (deferred)*
 
-### Phase 3 Complete
-- Config system: 7/7 complete
-- Extended tools: 2/2 complete
-- Documentation: 3/3 complete
-- Test coverage: 114 tests passing
+### Phase 4 Complete
+- LLM abstraction: 3/3 complete
+- Multi-provider support: Claude + Kimi K2
+- Config integration: Complete
+- Test coverage: 140 tests passing
 
 ---
 

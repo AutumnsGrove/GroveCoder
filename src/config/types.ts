@@ -53,6 +53,36 @@ export interface ConfigBehavior {
 }
 
 /**
+ * Supported LLM providers
+ */
+export type LLMProviderType = 'claude' | 'kimi';
+
+/**
+ * LLM/Model configuration
+ */
+export interface ConfigModel {
+  /**
+   * LLM provider to use: 'claude' or 'kimi'
+   * - claude: Anthropic Claude (more capable, higher cost)
+   * - kimi: Moonshot Kimi K2 (cheaper, good for simpler fixes)
+   * Default: 'claude'
+   */
+  provider?: LLMProviderType;
+  /**
+   * Specific model ID to use (provider-specific)
+   * Claude models: 'claude-sonnet-4-20250514', 'claude-opus-4-20250514'
+   * Kimi models: 'kimi-k2-0711-preview', 'moonshot-v1-128k'
+   * Default: Provider's default model
+   */
+  model?: string;
+  /**
+   * Maximum tokens for model response
+   * Default: 8192
+   */
+  maxTokens?: number;
+}
+
+/**
  * Full GroveCoder configuration schema
  */
 export interface GroveCoderConfig {
@@ -66,6 +96,8 @@ export interface GroveCoderConfig {
   protectedPaths?: ConfigProtectedPaths;
   /** Behavior settings */
   behavior?: ConfigBehavior;
+  /** LLM provider and model settings */
+  model?: ConfigModel;
 }
 
 /**
@@ -92,6 +124,11 @@ export const DEFAULT_CONFIG: Required<GroveCoderConfig> = {
     requestReReview: true,
     minSeverity: 'minor',
     ignorePatterns: [],
+  },
+  model: {
+    provider: 'claude',
+    model: undefined, // Use provider's default
+    maxTokens: 8192,
   },
 };
 

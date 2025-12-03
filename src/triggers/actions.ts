@@ -3,7 +3,7 @@
  */
 
 import { logger, ConfigError } from '../utils/index.js';
-import { ClaudeClient } from '../claude/client.js';
+import { createLLMClientFromConfig } from '../llm/index.js';
 import { GitHubClient } from '../github/client.js';
 import type { RepoContext } from '../github/types.js';
 import { isClaudeReview, parseClaudeReview, validateReview } from '../agent/parser.js';
@@ -114,14 +114,13 @@ export async function handleActionsEvent(): Promise<void> {
     complexity: review.complexityEstimate,
   });
 
-  // Initialize clients
-  const claude = new ClaudeClient();
+  // Initialize GitHub client (LLM client initialized after config load)
   const github = new GitHubClient();
 
   // Get PR details
   const prDetails = await github.getPRDetails(repo, ctx.prNumber);
 
-  // Load configuration from repository
+  // Load configuration from repository (needed for LLM provider selection)
   let config;
   try {
     config = await loadConfig(github, repo, prDetails.head.ref);
@@ -159,15 +158,22 @@ export async function handleActionsEvent(): Promise<void> {
   const safetyLimits = config ? mergeWithSafetyDefaults(config) : undefined;
   const diffLimits = config ? mergeWithDiffDefaults(config) : undefined;
 
+  // Initialize LLM client based on config (defaults to Claude if not specified)
+  const llm = createLLMClientFromConfig(config?.model);
+
+  logger.info('LLM client initialized', {
+    provider: llm.provider,
+  });
+
   // Post starting comment
   await github.addPRComment(repo, ctx.prNumber,
-    `## GroveCoder Starting\n\nI'm analyzing the review feedback and will attempt to fix the identified issues.\n\n- **Issues Found:** ${review.issuesAndConcerns.length}\n- **Complexity:** ${review.complexityEstimate}`
+    `## GroveCoder Starting\n\nI'm analyzing the review feedback and will attempt to fix the identified issues.\n\n- **Issues Found:** ${review.issuesAndConcerns.length}\n- **Complexity:** ${review.complexityEstimate}\n- **LLM Provider:** ${llm.provider}`
   );
 
   // Run the agent loop
   const dryRun = process.env['GROVECODER_DRY_RUN'] === 'true';
   const result = await runAgentLoop({
-    claude,
+    llm,
     github,
     repo,
     prDetails,

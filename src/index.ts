@@ -35,7 +35,10 @@ main().catch((error) => {
 
 // Export modules for programmatic use
 export * from './agent/index.js';
-export * from './claude/index.js';
+export * from './llm/index.js';
+// Note: claude module not re-exported due to type conflicts with llm module.
+// Import directly from './claude/index.js' if needed for Claude-specific utilities.
 export * from './github/index.js';
 export * from './tools/index.js';
 export * from './utils/index.js';
+export * from './config/index.js';
