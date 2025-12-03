@@ -32,17 +32,99 @@ const ALLOWED_COMMANDS = [
 
 const COMMAND_TIMEOUT_MS = 60_000; // 1 minute
 
-const DANGEROUS_OPERATORS = ['&&', '||', ';', '|', '`', '$(' , '>' , '<', '>>'];
+/**
+ * Shell operators and characters that could be used for command injection.
+ * These are checked as substrings in the command.
+ */
+const DANGEROUS_OPERATORS = [
+  // Command chaining
+  '&&',      // AND operator
+  '||',      // OR operator
+  ';',       // Command separator
+  '|',       // Pipe
 
-function containsDangerousOperators(command: string): boolean {
-  return DANGEROUS_OPERATORS.some((op) => command.includes(op));
+  // Command substitution
+  '`',       // Backtick substitution
+  '$(',      // Modern substitution
+  '${',      // Parameter expansion
+
+  // Redirection
+  '>',       // Output redirect
+  '<',       // Input redirect
+  '>>',      // Append redirect
+
+  // Process substitution
+  '<(',      // Process substitution input
+  '>(',      // Process substitution output
+];
+
+/**
+ * Characters that should never appear in commands (indicate injection attempts)
+ */
+const FORBIDDEN_CHARACTERS = [
+  '\0',      // Null byte
+  '\n',      // Newline
+  '\r',      // Carriage return
+  '\x1b',    // Escape character (ANSI sequences)
+];
+
+/**
+ * Check if command contains dangerous shell operators or characters
+ */
+function containsDangerousContent(command: string): { dangerous: boolean; reason?: string } {
+  // Check for forbidden characters first
+  for (const char of FORBIDDEN_CHARACTERS) {
+    if (command.includes(char)) {
+      const charName = {
+        '\0': 'null byte',
+        '\n': 'newline',
+        '\r': 'carriage return',
+        '\x1b': 'escape character',
+      }[char] ?? 'forbidden character';
+      return { dangerous: true, reason: `Command contains ${charName}` };
+    }
+  }
+
+  // Check for dangerous operators
+  for (const op of DANGEROUS_OPERATORS) {
+    if (command.includes(op)) {
+      return { dangerous: true, reason: `Command contains shell operator: ${op}` };
+    }
+  }
+
+  return { dangerous: false };
+}
+
+/**
+ * Validate command arguments after the base command.
+ * Only allows safe argument patterns.
+ */
+function validateCommandArguments(args: string): boolean {
+  // Arguments should only contain safe characters:
+  // - Alphanumeric
+  // - Dashes, underscores, dots
+  // - Equals (for --flag=value)
+  // - Colons (for test filters like test:unit)
+  // - Slashes (for paths)
+  // - Spaces (between arguments)
+  // - Quotes (for quoted strings) - but we still check for dangerous content inside
+  const safeArgsPattern = /^[\w\s\-_.=:/"'@,]+$/;
+
+  if (!safeArgsPattern.test(args)) {
+    return false;
+  }
+
+  return true;
 }
 
 function isCommandAllowed(command: string): boolean {
-  const normalized = command.trim().toLowerCase();
+  const trimmed = command.trim();
+  const normalized = trimmed.toLowerCase();
 
-  // Reject commands with shell operators that could chain malicious commands
-  if (containsDangerousOperators(command)) {
+  // Check for dangerous operators/characters first
+  const { dangerous, reason } = containsDangerousContent(trimmed);
+  if (dangerous) {
+    logger.debug('Command rejected', { command: trimmed, reason });
     return false;
   }
 
@@ -51,18 +133,32 @@ function isCommandAllowed(command: string): boolean {
     return true;
   }
 
-  // Check prefix matches (e.g., "npm test -- specific-file")
-  if (
-    ALLOWED_COMMANDS.some((allowed) =>
-      normalized.startsWith(allowed.toLowerCase() + ' ')
-    )
-  ) {
-    return true;
+  // Check prefix matches with argument validation
+  for (const allowed of ALLOWED_COMMANDS) {
+    const prefix = allowed.toLowerCase() + ' ';
+    if (normalized.startsWith(prefix)) {
+      const args = trimmed.slice(allowed.length + 1);
+      if (validateCommandArguments(args)) {
+        return true;
+      } else {
+        logger.debug('Command arguments rejected', { command: trimmed, args });
+        return false;
+      }
+    }
   }
 
-  // Allow git commands with flags
-  if (normalized.startsWith('git status') || normalized.startsWith('git diff') || normalized.startsWith('git log')) {
-    return true;
+  // Allow git commands with flags (with argument validation)
+  const gitPrefixes = ['git status', 'git diff', 'git log'];
+  for (const prefix of gitPrefixes) {
+    if (normalized === prefix) {
+      return true;
+    }
+    if (normalized.startsWith(prefix + ' ')) {
+      const args = trimmed.slice(prefix.length + 1);
+      if (validateCommandArguments(args)) {
+        return true;
+      }
+    }
   }
 
   return false;
@@ -80,6 +176,18 @@ export async function runCommand(
       'run_command',
       false
     );
+  }
+
+  // Validate cwd if provided
+  if (cwd) {
+    // Prevent path traversal in cwd
+    if (cwd.includes('..')) {
+      throw new ToolExecutionError(
+        'Working directory cannot contain ".." (path traversal)',
+        'run_command',
+        false
+      );
+    }
   }
 
   try {

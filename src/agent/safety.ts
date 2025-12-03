@@ -131,21 +131,136 @@ export class SafetyChecker {
     });
   }
 
+  /**
+   * Normalize a file path to prevent bypass via path traversal.
+   * Resolves '..' and '.' components and normalizes separators.
+   */
+  normalizePath(path: string): string {
+    // Reject null bytes
+    if (path.includes('\0')) {
+      throw new SafetyLimitError(
+        'File path cannot contain null bytes',
+        'invalid_path'
+      );
+    }
+
+    // Normalize path separators
+    let normalized = path.replace(/\\/g, '/');
+
+    // Resolve path components
+    const parts: string[] = [];
+    for (const part of normalized.split('/')) {
+      if (part === '..') {
+        // Don't allow going above root - this is a potential escape attempt
+        if (parts.length === 0 || (parts.length === 1 && parts[0] === '')) {
+          throw new SafetyLimitError(
+            'Path traversal detected: cannot go above repository root',
+            'path_traversal'
+          );
+        }
+        parts.pop();
+      } else if (part !== '.' && part !== '') {
+        parts.push(part);
+      }
+    }
+
+    normalized = parts.join('/');
+
+    // Ensure result doesn't start with ..
+    if (normalized.startsWith('..')) {
+      throw new SafetyLimitError(
+        'Path traversal detected: path escapes repository',
+        'path_traversal'
+      );
+    }
+
+    return normalized;
+  }
+
+  /**
+   * Check if a path matches protected patterns.
+   * Performs case-insensitive matching for maximum security.
+   */
   isProtectedPath(path: string): boolean {
+    // First normalize the path to prevent bypass via traversal
+    let normalizedPath: string;
+    try {
+      normalizedPath = this.normalizePath(path);
+    } catch {
+      // If normalization fails (e.g., path traversal), treat as protected
+      return true;
+    }
+
+    // Convert to lowercase for case-insensitive matching
+    const lowerPath = normalizedPath.toLowerCase();
+
     const protectedPatterns = [
-      /^\.github\/workflows\//,
-      /^\.env/,
-      /secrets?\./i,
-      /\.pem$/,
-      /\.key$/,
+      // GitHub workflow files
+      /^\.github\/workflows\//i,
+      /^\.github\/actions\//i,
+
+      // Environment files (all variations)
+      /^\.env($|\.)/i,
+      /\.env$/i,
+
+      // Secret files
+      /secrets?\.json$/i,
+      /secrets?\.ya?ml$/i,
+      /secrets?\//i,
+
+      // Certificate and key files
+      /\.pem$/i,
+      /\.key$/i,
+      /\.crt$/i,
+      /\.cer$/i,
+      /\.p12$/i,
+      /\.pfx$/i,
+
+      // Credentials
       /credentials/i,
       /password/i,
+
+      // SSH keys
+      /^\.ssh\//i,
+      /id_rsa/i,
+      /id_ed25519/i,
+      /id_dsa/i,
+
+      // Git internals
+      /^\.git\//i,
+
+      // Docker secrets
+      /docker-compose.*secrets/i,
+
+      // Common config files with secrets
+      /\.npmrc$/i,
+      /\.pypirc$/i,
+      /\.netrc$/i,
+
+      // Token files
+      /token/i,
+      /api[_-]?key/i,
     ];
 
-    return protectedPatterns.some((pattern) => pattern.test(path));
+    // Check the normalized lowercase path against all patterns
+    return protectedPatterns.some((pattern) => pattern.test(lowerPath));
   }
 
   validateFilePath(path: string): void {
+    // First check for path traversal attacks
+    try {
+      this.normalizePath(path);
+    } catch (error) {
+      if (error instanceof SafetyLimitError) {
+        throw error;
+      }
+      throw new SafetyLimitError(
+        `Invalid file path: ${path}`,
+        'invalid_path'
+      );
+    }
+
+    // Then check protected patterns
     if (this.isProtectedPath(path)) {
       throw new SafetyLimitError(
         `Cannot modify protected file: ${path}`,

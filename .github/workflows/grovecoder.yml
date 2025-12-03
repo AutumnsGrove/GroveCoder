@@ -47,14 +47,29 @@ jobs:
               repo: context.repo.repo,
               pull_number: context.issue.number
             });
-            core.setOutput('head_ref', pr.data.head.ref);
+
+            // Validate branch name to prevent command injection
+            const branchName = pr.data.head.ref;
+            const safeBranchPattern = /^[a-zA-Z0-9_\-./]+$/;
+            if (!safeBranchPattern.test(branchName)) {
+              core.setFailed(`Invalid branch name: ${branchName}`);
+              return;
+            }
+
+            core.setOutput('head_ref', branchName);
             core.setOutput('head_sha', pr.data.head.sha);
             return pr.data;
 
       - name: Checkout PR head
         run: |
-          git checkout ${{ steps.pr.outputs.head_ref }}
-          git pull origin ${{ steps.pr.outputs.head_ref }}
+          # Validate branch name format before using in shell commands
+          BRANCH="${{ steps.pr.outputs.head_ref }}"
+          if [[ ! "$BRANCH" =~ ^[a-zA-Z0-9_./\-]+$ ]]; then
+            echo "Error: Invalid branch name format"
+            exit 1
+          fi
+          git checkout "$BRANCH"
+          git pull origin "$BRANCH"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -87,13 +102,20 @@ jobs:
       - name: Push changes
         run: |
           if [ -n "$(git status --porcelain)" ]; then
+            # Validate branch name format before using in shell commands
+            BRANCH="${{ steps.pr.outputs.head_ref }}"
+            if [[ ! "$BRANCH" =~ ^[a-zA-Z0-9_./\-]+$ ]]; then
+              echo "Error: Invalid branch name format"
+              exit 1
+            fi
+
             git add -A
             git commit -m "fix: apply automated fixes from GroveCoder
 
             Addresses review comments from PR #${{ github.event.issue.number }}
 
             Co-authored-by: Claude <claude@anthropic.com>"
-            git push origin ${{ steps.pr.outputs.head_ref }}
+            git push origin "$BRANCH"
           else
             echo "No changes to commit"
           fi
