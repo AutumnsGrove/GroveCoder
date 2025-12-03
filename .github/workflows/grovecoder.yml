@@ -12,13 +12,16 @@ concurrency:
 jobs:
   remediate:
     # Only run on PR comments (not issue comments)
-    # Only run on comments from Claude bot
+    # Run on comments from Claude bot OR comments that mention @grovecoder OR contain review keywords
     if: |
       github.event.issue.pull_request != null &&
       (github.event.comment.user.login == 'claude[bot]' ||
        github.event.comment.user.login == 'github-actions[bot]' ||
+       contains(github.event.comment.body, '@grovecoder') ||
        contains(github.event.comment.body, '## Issues & Concerns') ||
-       contains(github.event.comment.body, '## Code Review'))
+       contains(github.event.comment.body, '## Code Review') ||
+       contains(github.event.comment.body, '# PR Review') ||
+       contains(github.event.comment.body, '🔴 Critical Issues'))
 
     runs-on: ubuntu-latest
 
