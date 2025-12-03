@@ -6,6 +6,7 @@ import { logger, ParseError } from '../utils/index.js';
 import type { ParsedReview, ReviewIssue, IssueSeverity } from './types.js';
 
 const CLAUDE_REVIEW_SIGNATURES = [
+  '# PR Review',
   '## Issues & Concerns',
   '## Code Review',
   '## Review Summary',
@@ -13,6 +14,8 @@ const CLAUDE_REVIEW_SIGNATURES = [
   '**Issues & Concerns**',
   '**Critical Issues**',
   '**Major Issues**',
+  '🔴 Critical Issues',
+  '🟡 Major Issues',
 ];
 
 export function isClaudeReview(content: string): boolean {
