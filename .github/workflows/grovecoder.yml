@@ -53,10 +53,10 @@ jobs:
             core.setOutput('head_sha', pr.data.head.sha);
             return pr.data;
 
-      - name: Checkout PR branch
+      - name: Checkout main branch for GroveCoder code
         uses: actions/checkout@v4
         with:
-          ref: ${{ steps.pr.outputs.head_ref }}
+          ref: main
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -69,8 +69,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build
+      - name: Build GroveCoder
         run: npm run build
+
+      - name: Switch to PR branch
+        run: |
+          git fetch origin ${{ steps.pr.outputs.head_ref }}
+          git checkout ${{ steps.pr.outputs.head_ref }}
 
       - name: Run GroveCoder
         env:
