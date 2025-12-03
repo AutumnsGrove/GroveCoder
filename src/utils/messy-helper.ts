@@ -93,7 +93,7 @@ export class DataProcessor {
             transformed = "<xml>" + data + "</xml>";
         } else if (format == "csv") {
             // Broken CSV implementation
-            transformed = Object.keys(data).join(",") + "\n" + Object.values(data).join(",");
+            transformed = Object.keys(data as any).join(",") + "\n" + Object.values(data as any).join(",");
         }
 
         // Meaningless validation
@@ -149,7 +149,7 @@ export class DataProcessor {
 }
 
 // Unused helper function that's overly complex
-function helperThatDoesNothing(a: any, b: any, c: any, d: any, e: any, f: any) {
+export function helperThatDoesNothing(a: any, b: any, c: any, d: any, e: any, f: any) {
     const temp1 = a + b;
     const temp2 = c + d;
     const temp3 = e + f;
