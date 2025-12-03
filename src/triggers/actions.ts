@@ -8,6 +8,12 @@ import { GitHubClient } from '../github/client.js';
 import type { RepoContext } from '../github/types.js';
 import { isClaudeReview, parseClaudeReview, validateReview } from '../agent/parser.js';
 import { runAgentLoop } from '../agent/loop.js';
+import {
+  loadConfig,
+  mergeWithSafetyDefaults,
+  mergeWithDiffDefaults,
+  ConfigValidationError,
+} from '../config/index.js';
 
 export interface ActionsContext {
   repository: string; // owner/repo format
@@ -115,6 +121,44 @@ export async function handleActionsEvent(): Promise<void> {
   // Get PR details
   const prDetails = await github.getPRDetails(repo, ctx.prNumber);
 
+  // Load configuration from repository
+  let config;
+  try {
+    config = await loadConfig(github, repo, prDetails.head.ref);
+    logger.info('Configuration loaded', {
+      version: config.version,
+      hasCustomSafety: !!config.safety,
+      hasCustomCommands: !!config.commands,
+    });
+  } catch (error) {
+    if (error instanceof ConfigValidationError) {
+      logger.error('Invalid configuration', {
+        field: error.field,
+        value: error.value,
+        message: error.message,
+      });
+      await github.addPRComment(
+        repo,
+        ctx.prNumber,
+        `## GroveCoder Configuration Error\n\n` +
+          `Invalid configuration in \`.github/grovecoder.yml\`:\n\n` +
+          `**Field:** \`${error.field}\`\n` +
+          `**Error:** ${error.message}\n\n` +
+          `Please fix the configuration and re-trigger GroveCoder.`
+      );
+      process.exitCode = 1;
+      return;
+    }
+    // Non-validation errors - log and continue with defaults
+    logger.warn('Failed to load config, using defaults', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
+  // Merge config with defaults
+  const safetyLimits = config ? mergeWithSafetyDefaults(config) : undefined;
+  const diffLimits = config ? mergeWithDiffDefaults(config) : undefined;
+
   // Post starting comment
   await github.addPRComment(repo, ctx.prNumber,
     `## GroveCoder Starting\n\nI'm analyzing the review feedback and will attempt to fix the identified issues.\n\n- **Issues Found:** ${review.issuesAndConcerns.length}\n- **Complexity:** ${review.complexityEstimate}`
@@ -129,6 +173,9 @@ export async function handleActionsEvent(): Promise<void> {
     prDetails,
     review,
     dryRun,
+    safetyLimits,
+    diffLimits,
+    config,
   });
 
   // Post summary comment

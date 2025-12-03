@@ -1,6 +1,6 @@
 # GroveCoder TODO
 
-> **Current Focus:** Phase 2 - Full Loop & Testing
+> **Current Focus:** Phase 4 - Multi-Model Support (Next)
 
 ---
 
@@ -135,58 +135,62 @@
 
 ---
 
-## Phase 3: Configuration & Polish
+## Phase 3: Configuration & Polish ✅ COMPLETE
 
-### Repo Config (`.github/grovecoder.yml`)
-- [ ] **Config schema definition**
-  - TypeScript interface for config
-  - JSON Schema for validation
+### Repo Config (`.github/grovecoder.yml`) ✅
+- [x] **Config schema definition**
+  - TypeScript interface for config (`src/config/types.ts`)
   - Version field for compatibility
-- [ ] **Config loader with defaults**
+  - Hard limits that cannot be exceeded
+- [x] **Config loader with defaults**
   - Load from `.github/grovecoder.yml`
   - Merge with default values
   - Handle missing config gracefully
-- [ ] **Validation**
+- [x] **Validation**
   - Validate against schema
   - Log warnings for unknown fields
   - Fail fast on invalid config
-- [ ] **Override safety limits (stricter only)**
-  - Allow reducing max iterations
-  - Allow reducing cost cap
+- [x] **Override safety limits (stricter only)**
+  - Allow reducing max iterations (1-25)
+  - Allow reducing cost cap ($0.10-$2.00)
   - Prevent loosening limits
-- [ ] **Allowed commands whitelist**
+- [x] **Allowed commands whitelist**
   - User-defined command patterns
   - Merge with default whitelist
-  - Support glob patterns
-- [ ] **Protected paths patterns**
+  - Blocked command support
+- [x] **Protected paths patterns**
   - User-defined protected paths
   - Glob pattern support
   - Merge with defaults
+- [x] **Integrate config into agent loop**
+  - Load config at startup in actions handler
+  - Apply to SafetyChecker via AgentLoopOptions
 
-### Extended Tools
-- [ ] **`web_fetch` tool**
+### Extended Tools ✅
+- [x] **`web_fetch` tool**
   - Fetch documentation URLs
-  - Parse HTML to markdown
-  - Cache responses
-  - Timeout handling
-- [ ] **`request_human_help` tool**
+  - Parse HTML to text
+  - Cache responses (5 min TTL)
+  - Timeout handling (10s)
+  - Allowed domain whitelist
+- [x] **`request_human_help` tool**
   - Post detailed comment explaining blockers
   - Add needs-help label
-  - Tag PR author or specified users
+  - Suggested actions for humans
   - Exit agent gracefully
 
-### Documentation
-- [ ] **ARCHITECTURE.md**
+### Documentation ✅
+- [x] **ARCHITECTURE.md** (`docs/ARCHITECTURE.md`)
   - System overview diagram
   - Layer descriptions
   - Data flow explanation
   - Extension points
-- [ ] **TOOLS.md reference**
+- [x] **TOOLS.md reference** (`docs/TOOLS.md`)
   - Each tool with examples
   - Input/output schemas
   - Common use cases
   - Error handling
-- [ ] **CONTRIBUTING.md**
+- [x] **CONTRIBUTING.md** (`docs/CONTRIBUTING.md`)
   - Development setup
   - Testing guidelines
   - PR process
@@ -274,9 +278,11 @@
 1. ~~Complete Phase 2 testing (critical for reliability)~~ ✅
 2. ~~Add protected branch check (safety requirement)~~ ✅
 3. ~~Implement label management (UX improvement)~~ ✅
-4. Build configuration system (Phase 3)
-5. Create test repository for E2E testing
-6. Implement web_fetch and request_human_help tools
+4. ~~Build configuration system (Phase 3)~~ ✅
+5. ~~Implement web_fetch and request_human_help tools~~ ✅
+6. Integrate config into agent loop
+7. Create test repository for E2E testing
+8. Documentation (ARCHITECTURE.md, TOOLS.md, CONTRIBUTING.md)
 
 ### Technical Debt
 - Parser could use more robust regex patterns
@@ -295,14 +301,20 @@
 
 | Phase | Total Tasks | Completed | Remaining |
 |-------|-------------|-----------|-----------|
-| 1     | 45          | 42        | 3         |
+| 1     | 45          | 42        | 3*        |
 | 2     | 15          | 13        | 2*        |
-| 3     | 14          | 0         | 14        |
+| 3     | 15          | 15        | 0         |
 | 4     | 4           | 0         | 4         |
 | 5     | 6           | 0         | 6         |
 | 6     | 4           | 0         | 4         |
 
-*\*2 test tasks deferred to Phase 3 (test repository & E2E tests)*
+*\*Remaining Phase 1/2 tasks are E2E testing (deferred)*
+
+### Phase 3 Complete
+- Config system: 7/7 complete
+- Extended tools: 2/2 complete
+- Documentation: 3/3 complete
+- Test coverage: 114 tests passing
 
 ---
 
