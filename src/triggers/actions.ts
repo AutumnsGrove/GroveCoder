@@ -99,19 +99,14 @@ export async function handleActionsEvent(): Promise<void> {
   // Parse the review
   const review = parseClaudeReview(ctx.commentBody);
 
-  try {
-    validateReview(review);
-  } catch (error) {
-    logger.info('Review validation failed, skipping', {
-      error: error instanceof Error ? error.message : String(error),
-    });
-    return;
-  }
+  // Validate (now always passes - we accept all Claude reviews)
+  validateReview(review);
 
   logger.info('Parsed Claude review', {
     issueCount: review.issuesAndConcerns.length,
     recommendation: review.finalRecommendation,
     complexity: review.complexityEstimate,
+    hasRawContent: review.rawContent.length > 0,
   });
 
   // Initialize GitHub client (LLM client initialized after config load)
@@ -165,32 +160,74 @@ export async function handleActionsEvent(): Promise<void> {
     provider: llm.provider,
   });
 
-  // Post starting comment
-  await github.addPRComment(repo, ctx.prNumber,
-    `## GroveCoder Starting\n\nI'm analyzing the review feedback and will attempt to fix the identified issues.\n\n- **Issues Found:** ${review.issuesAndConcerns.length}\n- **Complexity:** ${review.complexityEstimate}\n- **LLM Provider:** ${llm.provider}`
+  // Create GitHub Check Run for status visibility
+  const checkRunId = await github.createCheckRun(
+    repo,
+    'GroveCoder',
+    prDetails.head.sha,
+    'in_progress'
   );
 
-  // Run the agent loop
-  const dryRun = process.env['GROVECODER_DRY_RUN'] === 'true';
-  const result = await runAgentLoop({
-    llm,
-    github,
-    repo,
-    prDetails,
-    review,
-    dryRun,
-    safetyLimits,
-    diffLimits,
-    config,
-  });
+  try {
+    // Update check run with initial info
+    await github.updateCheckRun(repo, checkRunId, {
+      status: 'in_progress',
+      output: {
+        title: 'GroveCoder is analyzing the code',
+        summary: `Found ${review.issuesAndConcerns.length} issues to address\n\n` +
+                 `**Complexity:** ${review.complexityEstimate}\n` +
+                 `**LLM Provider:** ${llm.provider}`,
+      },
+    });
 
-  // Post summary comment
-  await github.addPRComment(repo, ctx.prNumber, result.summary);
+    // Post starting comment
+    await github.addPRComment(repo, ctx.prNumber,
+      `## GroveCoder Starting\n\nI'm analyzing the review feedback and will attempt to fix the identified issues.\n\n- **Issues Found:** ${review.issuesAndConcerns.length}\n- **Complexity:** ${review.complexityEstimate}\n- **LLM Provider:** ${llm.provider}`
+    );
 
-  if (result.success) {
-    logger.info('GroveCoder completed successfully');
-  } else {
-    logger.error('GroveCoder completed with errors', { error: result.error });
-    process.exitCode = 1;
+    // Run the agent loop
+    const dryRun = process.env['GROVECODER_DRY_RUN'] === 'true';
+    const result = await runAgentLoop({
+      llm,
+      github,
+      repo,
+      prDetails,
+      review,
+      dryRun,
+      safetyLimits,
+      diffLimits,
+      config,
+    });
+
+    // Post summary comment
+    await github.addPRComment(repo, ctx.prNumber, result.summary);
+
+    // Update check run with final status
+    await github.updateCheckRun(repo, checkRunId, {
+      status: 'completed',
+      conclusion: result.success ? 'success' : 'failure',
+      output: {
+        title: result.success ? 'GroveCoder completed successfully' : 'GroveCoder encountered errors',
+        summary: result.summary,
+      },
+    });
+
+    if (result.success) {
+      logger.info('GroveCoder completed successfully');
+    } else {
+      logger.error('GroveCoder completed with errors', { error: result.error });
+      process.exitCode = 1;
+    }
+  } catch (error) {
+    // Update check run with failure status
+    await github.updateCheckRun(repo, checkRunId, {
+      status: 'completed',
+      conclusion: 'failure',
+      output: {
+        title: 'GroveCoder failed',
+        summary: error instanceof Error ? error.message : String(error),
+      },
+    });
+    throw error;
   }
 }

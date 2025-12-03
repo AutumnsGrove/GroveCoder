@@ -1,0 +1,26 @@
+# GroveCoder Configuration
+
+version: "1"
+
+# Safety limits
+safety:
+  # Allow modifications to PRs targeting main branch (for testing)
+  allowedTargetBranches:
+    - main
+    - develop
+    - test/*
+
+  # Maximum iterations before stopping
+  maxIterations: 25
+
+  # Maximum cost in USD before stopping
+  maxCostUSD: 2.0
+
+  # Timeout in minutes
+  timeoutMinutes: 15
+
+# Model configuration
+model:
+  provider: claude
+  name: claude-sonnet-4-5-20250929
+  maxTokens: 8192

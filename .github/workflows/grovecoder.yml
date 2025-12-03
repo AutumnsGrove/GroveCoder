@@ -12,13 +12,16 @@ concurrency:
 jobs:
   remediate:
     # Only run on PR comments (not issue comments)
-    # Only run on comments from Claude bot
+    # Run on comments from Claude bot OR comments that mention @grovecoder OR contain review keywords
     if: |
       github.event.issue.pull_request != null &&
       (github.event.comment.user.login == 'claude[bot]' ||
        github.event.comment.user.login == 'github-actions[bot]' ||
+       contains(github.event.comment.body, '@grovecoder') ||
        contains(github.event.comment.body, '## Issues & Concerns') ||
-       contains(github.event.comment.body, '## Code Review'))
+       contains(github.event.comment.body, '## Code Review') ||
+       contains(github.event.comment.body, '# PR Review') ||
+       contains(github.event.comment.body, '🔴 Critical Issues'))
 
     runs-on: ubuntu-latest
 
@@ -26,17 +29,11 @@ jobs:
       contents: write
       pull-requests: write
       issues: write
+      checks: write
 
     timeout-minutes: 15
 
     steps:
-      - name: Checkout PR branch
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.issue.pull_request.url }}
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Get PR details
         id: pr
         uses: actions/github-script@v7
@@ -60,16 +57,12 @@ jobs:
             core.setOutput('head_sha', pr.data.head.sha);
             return pr.data;
 
-      - name: Checkout PR head
-        run: |
-          # Validate branch name format before using in shell commands
-          BRANCH="${{ steps.pr.outputs.head_ref }}"
-          if [[ ! "$BRANCH" =~ ^[a-zA-Z0-9_./\-]+$ ]]; then
-            echo "Error: Invalid branch name format"
-            exit 1
-          fi
-          git checkout "$BRANCH"
-          git pull origin "$BRANCH"
+      - name: Checkout main branch for GroveCoder code
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -80,8 +73,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build
+      - name: Build GroveCoder
         run: npm run build
+
+      - name: Switch to PR branch
+        run: |
+          git fetch origin ${{ steps.pr.outputs.head_ref }}
+          git checkout ${{ steps.pr.outputs.head_ref }}
 
       - name: Run GroveCoder
         env:

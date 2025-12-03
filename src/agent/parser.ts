@@ -2,10 +2,11 @@
  * Claude review comment parser for GroveCoder
  */
 
-import { logger, ParseError } from '../utils/index.js';
+import { logger } from '../utils/index.js';
 import type { ParsedReview, ReviewIssue, IssueSeverity } from './types.js';
 
 const CLAUDE_REVIEW_SIGNATURES = [
+  '# PR Review',
   '## Issues & Concerns',
   '## Code Review',
   '## Review Summary',
@@ -13,17 +14,27 @@ const CLAUDE_REVIEW_SIGNATURES = [
   '**Issues & Concerns**',
   '**Critical Issues**',
   '**Major Issues**',
+  '🔴 Critical Issues',
+  '🟡 Major Issues',
 ];
 
 export function isClaudeReview(content: string): boolean {
+  // Check for explicit GroveCoder trigger
+  if (/@grovecoder/i.test(content) || /\bgrovecoder\b/i.test(content)) {
+    return true;
+  }
+
+  // Check for Claude review signatures
   const hasSignature = CLAUDE_REVIEW_SIGNATURES.some((sig) =>
     content.includes(sig)
   );
 
-  // Also check for typical Claude review patterns
+  // Check for typical review patterns (Claude or human)
   const hasReviewPattern =
     /(?:critical|major|minor|suggestion).*?:.*?(?:issue|concern|problem)/i.test(content) ||
-    /(?:approve|request.?changes|needs.?discussion)/i.test(content);
+    /(?:approve|request.?changes|needs.?discussion)/i.test(content) ||
+    /(?:needs?.?fix|please.?fix|should.?fix|fix.?this)/i.test(content) ||
+    /(?:security|vulnerability|bug|error).{0,50}(?:found|detected|issue)/i.test(content);
 
   return hasSignature || hasReviewPattern;
 }
@@ -258,8 +269,9 @@ function estimateComplexity(issues: ReviewIssue[]): ParsedReview['complexityEsti
   return 'low';
 }
 
-export function validateReview(review: ParsedReview): void {
-  if (review.issuesAndConcerns.length === 0 && review.recommendations.length === 0) {
-    throw new ParseError('No issues or recommendations found in review');
-  }
+export function validateReview(_review: ParsedReview): void {
+  // Accept all reviews from Claude - even if we can't parse specific issues,
+  // the agent can still work with the raw content
+  // This enables fully automated fixing of any Claude review
+  return;
 }
