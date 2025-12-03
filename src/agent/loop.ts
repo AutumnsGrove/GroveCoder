@@ -18,6 +18,13 @@ import { SafetyChecker, createInitialState, updateState } from './safety.js';
 import { SYSTEM_PROMPT, buildInitialPrompt } from './prompt.js';
 import type { ParsedReview, AgentState } from './types.js';
 
+/** GroveCoder label constants */
+export const LABELS = {
+  WORKING: 'grovecoder-working',
+  COMPLETED: 'grovecoder-completed',
+  NEEDS_HELP: 'grovecoder-needs-help',
+} as const;
+
 export interface AgentLoopOptions {
   claude: ClaudeClient;
   github: GitHubClient;
@@ -41,6 +48,7 @@ export async function runAgentLoop(options: AgentLoopOptions): Promise<AgentLoop
   let state = createInitialState();
   const messages: Message[] = [];
   const fileCache = new Map<string, { content: string; sha: string }>();
+  const totalIssues = review.issuesAndConcerns.length;
 
   const toolCtx: ToolContext = {
     github,
@@ -53,9 +61,34 @@ export async function runAgentLoop(options: AgentLoopOptions): Promise<AgentLoop
   logger.info('Starting agent loop', {
     prNumber: prDetails.number,
     branch: prDetails.head.ref,
-    issueCount: review.issuesAndConcerns.length,
+    baseBranch: prDetails.base.ref,
+    issueCount: totalIssues,
     dryRun,
   });
+
+  // Pre-flight safety checks
+  try {
+    safety.checkProtectedBranch(prDetails.base.ref);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error('Protected branch check failed', { baseBranch: prDetails.base.ref });
+    return {
+      success: false,
+      state,
+      summary: buildSummary(state, review),
+      error: errorMessage,
+    };
+  }
+
+  // Add working label (non-blocking if it fails)
+  if (!dryRun) {
+    try {
+      await github.addLabel(repo, prDetails.number, [LABELS.WORKING]);
+      logger.info('Added working label', { label: LABELS.WORKING });
+    } catch (error) {
+      logger.warn('Failed to add working label', { error: String(error) });
+    }
+  }
 
   // Build initial prompt
   const initialPrompt = buildInitialPrompt(review, prDetails.title, prDetails.head.ref);
@@ -68,6 +101,17 @@ export async function runAgentLoop(options: AgentLoopOptions): Promise<AgentLoop
       // Safety checks
       safety.checkAll(state);
       safety.logStatus(state);
+
+      // Post progress update if needed
+      if (!dryRun && safety.shouldPostProgressUpdate(state)) {
+        const progressMessage = safety.buildProgressUpdate(state, totalIssues);
+        try {
+          await github.addPRComment(repo, prDetails.number, progressMessage);
+          logger.info('Posted progress update', { iteration: state.iteration });
+        } catch (error) {
+          logger.warn('Failed to post progress update', { error: String(error) });
+        }
+      }
 
       // Send message to Claude
       const response = await claude.sendMessage(messages, {
@@ -102,16 +146,36 @@ export async function runAgentLoop(options: AgentLoopOptions): Promise<AgentLoop
       // Execute tools
       const results = await executeTools(toolUses, toolCtx);
 
-      // Build tool result message
+      // Build tool result message and track consecutive failures
+      let hasSuccessfulTool = false;
+      let hasFailedTool = false;
+
       const toolResults = toolUses.map((tu) => {
         const result = results.get(tu.id);
         if (!result) {
+          hasFailedTool = true;
           return createToolResult(tu.id, 'Tool execution failed: no result', true);
+        }
+        if (result.success) {
+          hasSuccessfulTool = true;
+        } else {
+          hasFailedTool = true;
         }
         return createToolResult(tu.id, result.output, !result.success);
       });
 
       messages.push(createToolResultMessage(toolResults));
+
+      // Update consecutive failures counter
+      if (hasSuccessfulTool) {
+        // Reset on any success
+        state = updateState(state, { consecutiveFailures: 0 });
+      } else if (hasFailedTool) {
+        // Increment on all failures
+        state = updateState(state, {
+          consecutiveFailures: state.consecutiveFailures + 1,
+        });
+      }
 
       // Check for completion via 'done' tool
       for (const result of results.values()) {
@@ -146,6 +210,11 @@ export async function runAgentLoop(options: AgentLoopOptions): Promise<AgentLoop
       exitReason: state.exitReason,
     });
 
+    // Update labels on success
+    if (!dryRun) {
+      await updateLabelsOnCompletion(github, repo, prDetails.number, true);
+    }
+
     return {
       success: true,
       state,
@@ -153,6 +222,8 @@ export async function runAgentLoop(options: AgentLoopOptions): Promise<AgentLoop
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
+    const isCircuitBreaker =
+      error instanceof SafetyLimitError && error.limitType === 'circuit_breaker';
     const exitReason = error instanceof SafetyLimitError ? `safety_${error.limitType}` : 'error';
 
     state = updateState(state, { isComplete: true, exitReason });
@@ -163,12 +234,56 @@ export async function runAgentLoop(options: AgentLoopOptions): Promise<AgentLoop
       exitReason,
     });
 
+    // Post circuit breaker diagnostic if applicable
+    if (!dryRun && isCircuitBreaker) {
+      const diagnostic = safety.buildCircuitBreakerDiagnostic(state);
+      try {
+        await github.addPRComment(repo, prDetails.number, diagnostic);
+      } catch (commentError) {
+        logger.warn('Failed to post circuit breaker diagnostic', { error: String(commentError) });
+      }
+    }
+
+    // Update labels on failure
+    if (!dryRun) {
+      const needsHelp = isCircuitBreaker || state.failedIssues > 0;
+      await updateLabelsOnCompletion(github, repo, prDetails.number, false, needsHelp);
+    }
+
     return {
       success: false,
       state,
       summary: buildSummary(state, review),
       error: errorMessage,
     };
+  }
+}
+
+/**
+ * Update labels when agent completes (success or failure)
+ */
+async function updateLabelsOnCompletion(
+  github: GitHubClient,
+  repo: RepoContext,
+  prNumber: number,
+  success: boolean,
+  needsHelp = false
+): Promise<void> {
+  try {
+    // Always remove working label
+    await github.removeLabel(repo, prNumber, LABELS.WORKING);
+
+    if (success) {
+      await github.addLabel(repo, prNumber, [LABELS.COMPLETED]);
+      // Remove needs-help if it was previously set
+      await github.removeLabel(repo, prNumber, LABELS.NEEDS_HELP);
+    } else if (needsHelp) {
+      await github.addLabel(repo, prNumber, [LABELS.NEEDS_HELP]);
+    }
+
+    logger.info('Updated completion labels', { success, needsHelp });
+  } catch (error) {
+    logger.warn('Failed to update completion labels', { error: String(error) });
   }
 }
 

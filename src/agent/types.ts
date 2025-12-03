@@ -31,6 +31,7 @@ export interface AgentState {
   lastProgress: number;
   fixedIssues: number;
   failedIssues: number;
+  consecutiveFailures: number;
   isComplete: boolean;
   exitReason?: string;
 }
@@ -41,6 +42,9 @@ export interface SafetyLimits {
   maxTokensPerCall: number;
   maxExecutionTimeMs: number;
   maxCostUsd: number;
+  maxConsecutiveFailures: number;
+  progressUpdateInterval: number;
+  protectedBranches: string[];
 }
 
 export const DEFAULT_SAFETY_LIMITS: SafetyLimits = {
@@ -49,6 +53,9 @@ export const DEFAULT_SAFETY_LIMITS: SafetyLimits = {
   maxTokensPerCall: 100_000,
   maxExecutionTimeMs: 15 * 60 * 1000, // 15 minutes
   maxCostUsd: 2.0,
+  maxConsecutiveFailures: 3,
+  progressUpdateInterval: 5,
+  protectedBranches: ['main', 'master', 'production', 'release/*'],
 };
 
 export interface DiffLimits {
