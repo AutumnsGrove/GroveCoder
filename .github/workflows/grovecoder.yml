@@ -30,13 +30,6 @@ jobs:
     timeout-minutes: 15
 
     steps:
-      - name: Checkout PR branch
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.issue.pull_request.url }}
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Get PR details
         id: pr
         uses: actions/github-script@v7
@@ -60,16 +53,12 @@ jobs:
             core.setOutput('head_sha', pr.data.head.sha);
             return pr.data;
 
-      - name: Checkout PR head
-        run: |
-          # Validate branch name format before using in shell commands
-          BRANCH="${{ steps.pr.outputs.head_ref }}"
-          if [[ ! "$BRANCH" =~ ^[a-zA-Z0-9_./\-]+$ ]]; then
-            echo "Error: Invalid branch name format"
-            exit 1
-          fi
-          git checkout "$BRANCH"
-          git pull origin "$BRANCH"
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.pr.outputs.head_ref }}
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
