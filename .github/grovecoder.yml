@@ -4,12 +4,6 @@ version: "1"
 
 # Safety limits
 safety:
-  # Allow modifications to PRs targeting main branch (for testing)
-  allowedTargetBranches:
-    - main
-    - develop
-    - test/*
-
   # Maximum iterations before stopping
   maxIterations: 25
 
@@ -18,6 +12,10 @@ safety:
 
   # Timeout in minutes
   timeoutMinutes: 15
+
+# Protected paths (override defaults to allow main branch for testing)
+protectedPaths:
+  branches: []  # Empty array = no protected branches
 
 # Model configuration
 model:
