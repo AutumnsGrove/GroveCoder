@@ -28,6 +28,47 @@ export class SafetyChecker {
     }
   }
 
+  /**
+   * Check if the target branch is protected
+   * Throws SafetyLimitError if PR targets a protected branch
+   */
+  checkProtectedBranch(baseBranch: string): void {
+    const isProtected = this.limits.protectedBranches.some((pattern) => {
+      if (pattern.includes('*')) {
+        // Handle glob patterns like 'release/*'
+        const regex = new RegExp('^' + pattern.replace(/\*/g, '.*') + '$');
+        return regex.test(baseBranch);
+      }
+      return pattern === baseBranch;
+    });
+
+    if (isProtected) {
+      throw new SafetyLimitError(
+        `Cannot modify PR targeting protected branch: ${baseBranch}`,
+        'protected_branch'
+      );
+    }
+  }
+
+  /**
+   * Check if circuit breaker should trip (3 consecutive failures)
+   */
+  checkCircuitBreaker(state: AgentState): void {
+    if (state.consecutiveFailures >= this.limits.maxConsecutiveFailures) {
+      throw new SafetyLimitError(
+        `Circuit breaker tripped: ${state.consecutiveFailures} consecutive tool failures`,
+        'circuit_breaker'
+      );
+    }
+  }
+
+  /**
+   * Check if a progress update should be posted
+   */
+  shouldPostProgressUpdate(state: AgentState): boolean {
+    return state.iteration > 0 && state.iteration % this.limits.progressUpdateInterval === 0;
+  }
+
   checkTime(state: AgentState): void {
     const elapsed = Date.now() - state.startTime;
     if (elapsed >= this.limits.maxExecutionTimeMs) {
@@ -64,6 +105,7 @@ export class SafetyChecker {
     this.checkTime(state);
     this.checkCost(state);
     this.checkProgress(state);
+    this.checkCircuitBreaker(state);
   }
 
   calculateCost(state: AgentState): number {
@@ -130,6 +172,49 @@ export class SafetyChecker {
       );
     }
   }
+
+  /**
+   * Build a progress update message for posting to the PR
+   */
+  buildProgressUpdate(state: AgentState, totalIssues: number): string {
+    const elapsed = Math.round((Date.now() - state.startTime) / 1000);
+    const cost = this.calculateCost(state);
+
+    let message = `## 🔄 GroveCoder Progress Update\n\n`;
+    message += `| Metric | Value |\n`;
+    message += `|--------|-------|\n`;
+    message += `| Iteration | ${state.iteration}/${this.limits.maxLoopIterations} |\n`;
+    message += `| Issues Fixed | ${state.fixedIssues}/${totalIssues} |\n`;
+    message += `| Time Elapsed | ${elapsed}s |\n`;
+    message += `| Estimated Cost | $${cost.toFixed(4)} |\n`;
+
+    if (state.consecutiveFailures > 0) {
+      message += `\n⚠️ Note: ${state.consecutiveFailures} consecutive tool failure(s) detected.\n`;
+    }
+
+    return message;
+  }
+
+  /**
+   * Build a circuit breaker diagnostic message
+   */
+  buildCircuitBreakerDiagnostic(state: AgentState): string {
+    const elapsed = Math.round((Date.now() - state.startTime) / 1000);
+
+    let message = `## ⚠️ GroveCoder Circuit Breaker Tripped\n\n`;
+    message += `The agent has been stopped after ${state.consecutiveFailures} consecutive tool failures.\n\n`;
+    message += `### Status at Stop\n`;
+    message += `- **Iterations Completed:** ${state.iteration}\n`;
+    message += `- **Issues Fixed:** ${state.fixedIssues}\n`;
+    message += `- **Issues Failed:** ${state.failedIssues}\n`;
+    message += `- **Time Elapsed:** ${elapsed}s\n\n`;
+    message += `### What to do\n`;
+    message += `1. Review the error logs above for details on the failures\n`;
+    message += `2. Address any blocking issues manually\n`;
+    message += `3. Re-trigger GroveCoder by posting a new review comment\n`;
+
+    return message;
+  }
 }
 
 export function createInitialState(): AgentState {
@@ -141,6 +226,7 @@ export function createInitialState(): AgentState {
     lastProgress: 0,
     fixedIssues: 0,
     failedIssues: 0,
+    consecutiveFailures: 0,
     isComplete: false,
   };
 }
