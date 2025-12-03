@@ -1,10 +1,12 @@
 /**
  * Core agentic loop implementation for GroveCoder
+ *
+ * This module is LLM-agnostic and works with any provider that implements
+ * the LLMClient interface (Claude, Kimi K2, etc.)
  */
 
 import { logger, SafetyLimitError } from '../utils/index.js';
-import { ClaudeClient } from '../claude/client.js';
-import type { Message } from '../claude/types.js';
+import type { LLMClient, Message } from '../llm/index.js';
 import {
   createToolResultMessage,
   createToolResult,
@@ -27,7 +29,8 @@ export const LABELS = {
 } as const;
 
 export interface AgentLoopOptions {
-  claude: ClaudeClient;
+  /** LLM client (Claude, Kimi, etc.) - any provider implementing LLMClient */
+  llm: LLMClient;
   github: GitHubClient;
   repo: RepoContext;
   prDetails: PRDetails;
@@ -50,7 +53,7 @@ export interface AgentLoopResult {
 
 export async function runAgentLoop(options: AgentLoopOptions): Promise<AgentLoopResult> {
   const {
-    claude,
+    llm,
     github,
     repo,
     prDetails,
@@ -82,6 +85,7 @@ export async function runAgentLoop(options: AgentLoopOptions): Promise<AgentLoop
     issueCount: totalIssues,
     dryRun,
     hasCustomConfig: !!config,
+    llmProvider: llm.provider,
   });
 
   // Pre-flight safety checks
@@ -131,8 +135,8 @@ export async function runAgentLoop(options: AgentLoopOptions): Promise<AgentLoop
         }
       }
 
-      // Send message to Claude
-      const response = await claude.sendMessage(messages, {
+      // Send message to LLM
+      const response = await llm.sendMessage(messages, {
         systemPrompt: SYSTEM_PROMPT,
         tools: getToolDefinitions(),
       });

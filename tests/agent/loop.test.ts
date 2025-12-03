@@ -7,9 +7,13 @@ import { runAgentLoop, LABELS, type AgentLoopOptions } from '../../src/agent/loo
 import type { ParsedReview } from '../../src/agent/types.js';
 import type { PRDetails, RepoContext } from '../../src/github/types.js';
 
-// Mock ClaudeClient
-const createMockClaudeClient = () => ({
+// Mock LLM client (any provider implementing LLMClient interface)
+const createMockLLMClient = () => ({
+  provider: 'claude' as const,
   sendMessage: vi.fn(),
+  getTotalUsage: vi.fn().mockReturnValue({ inputTokens: 0, outputTokens: 0 }),
+  calculateCost: vi.fn().mockReturnValue(0),
+  resetUsage: vi.fn(),
 });
 
 // Mock GitHubClient
@@ -100,16 +104,16 @@ const createToolUseResponse = (toolName: string, input: Record<string, unknown>)
 });
 
 describe('runAgentLoop', () => {
-  let mockClaude: ReturnType<typeof createMockClaudeClient>;
+  let mockLLM: ReturnType<typeof createMockLLMClient>;
   let mockGitHub: ReturnType<typeof createMockGitHubClient>;
   let options: AgentLoopOptions;
 
   beforeEach(() => {
-    mockClaude = createMockClaudeClient();
+    mockLLM = createMockLLMClient();
     mockGitHub = createMockGitHubClient();
 
     options = {
-      claude: mockClaude as unknown as AgentLoopOptions['claude'],
+      llm: mockLLM as unknown as AgentLoopOptions['llm'],
       github: mockGitHub as unknown as AgentLoopOptions['github'],
       repo: createMockRepo(),
       prDetails: createMockPRDetails(),
@@ -139,7 +143,7 @@ describe('runAgentLoop', () => {
 
     it('should allow PRs targeting feature branches', async () => {
       options.prDetails = createMockPRDetails({ base: { ref: 'develop', sha: 'abc' } });
-      mockClaude.sendMessage.mockResolvedValueOnce(createDoneResponse(1, 0));
+      mockLLM.sendMessage.mockResolvedValueOnce(createDoneResponse(1, 0));
 
       const result = await runAgentLoop(options);
 
@@ -149,7 +153,7 @@ describe('runAgentLoop', () => {
 
   describe('successful completion', () => {
     it('should complete when done tool is called', async () => {
-      mockClaude.sendMessage.mockResolvedValueOnce(createDoneResponse(1, 0));
+      mockLLM.sendMessage.mockResolvedValueOnce(createDoneResponse(1, 0));
 
       const result = await runAgentLoop(options);
 
@@ -159,7 +163,7 @@ describe('runAgentLoop', () => {
     });
 
     it('should include summary in result', async () => {
-      mockClaude.sendMessage.mockResolvedValueOnce(createDoneResponse(1, 0));
+      mockLLM.sendMessage.mockResolvedValueOnce(createDoneResponse(1, 0));
 
       const result = await runAgentLoop(options);
 
@@ -168,7 +172,7 @@ describe('runAgentLoop', () => {
     });
 
     it('should complete when no tool uses in response', async () => {
-      mockClaude.sendMessage.mockResolvedValueOnce({
+      mockLLM.sendMessage.mockResolvedValueOnce({
         content: [{ type: 'text', text: 'All done!' }],
         usage: { inputTokens: 100, outputTokens: 50 },
         stopReason: 'end_turn',
@@ -184,11 +188,11 @@ describe('runAgentLoop', () => {
   describe('tool execution', () => {
     it('should execute tools and continue loop', async () => {
       // First response: read file
-      mockClaude.sendMessage.mockResolvedValueOnce(
+      mockLLM.sendMessage.mockResolvedValueOnce(
         createToolUseResponse('read_file', { path: 'src/index.ts' })
       );
       // Second response: done
-      mockClaude.sendMessage.mockResolvedValueOnce(createDoneResponse(1, 0));
+      mockLLM.sendMessage.mockResolvedValueOnce(createDoneResponse(1, 0));
 
       // Mock file read
       mockGitHub.getFileContent.mockResolvedValueOnce({
@@ -201,16 +205,16 @@ describe('runAgentLoop', () => {
 
       expect(result.success).toBe(true);
       expect(result.state.iteration).toBe(2);
-      expect(mockClaude.sendMessage).toHaveBeenCalledTimes(2);
+      expect(mockLLM.sendMessage).toHaveBeenCalledTimes(2);
     });
 
     it('should track consecutive failures', async () => {
       // First response: tool that will fail
-      mockClaude.sendMessage.mockResolvedValueOnce(
+      mockLLM.sendMessage.mockResolvedValueOnce(
         createToolUseResponse('read_file', { path: 'nonexistent.ts' })
       );
       // Second response: done
-      mockClaude.sendMessage.mockResolvedValueOnce(createDoneResponse(0, 1));
+      mockLLM.sendMessage.mockResolvedValueOnce(createDoneResponse(0, 1));
 
       // Mock file read failure
       mockGitHub.getFileContent.mockRejectedValueOnce(new Error('File not found'));
@@ -225,7 +229,7 @@ describe('runAgentLoop', () => {
   describe('label management', () => {
     it('should add working label on start when not in dry run', async () => {
       options.dryRun = false;
-      mockClaude.sendMessage.mockResolvedValueOnce(createDoneResponse(1, 0));
+      mockLLM.sendMessage.mockResolvedValueOnce(createDoneResponse(1, 0));
 
       await runAgentLoop(options);
 
@@ -238,7 +242,7 @@ describe('runAgentLoop', () => {
 
     it('should update labels on successful completion', async () => {
       options.dryRun = false;
-      mockClaude.sendMessage.mockResolvedValueOnce(createDoneResponse(1, 0));
+      mockLLM.sendMessage.mockResolvedValueOnce(createDoneResponse(1, 0));
 
       await runAgentLoop(options);
 
@@ -258,7 +262,7 @@ describe('runAgentLoop', () => {
 
     it('should not manage labels in dry run mode', async () => {
       options.dryRun = true;
-      mockClaude.sendMessage.mockResolvedValueOnce(createDoneResponse(1, 0));
+      mockLLM.sendMessage.mockResolvedValueOnce(createDoneResponse(1, 0));
 
       await runAgentLoop(options);
 
@@ -270,7 +274,7 @@ describe('runAgentLoop', () => {
   describe('iteration limits', () => {
     it('should stop at max iterations', async () => {
       // Always return a tool use to keep the loop going
-      mockClaude.sendMessage.mockImplementation(() =>
+      mockLLM.sendMessage.mockImplementation(() =>
         Promise.resolve(createToolUseResponse('read_file', { path: 'test.ts' }))
       );
       mockGitHub.getFileContent.mockResolvedValue({
@@ -289,7 +293,7 @@ describe('runAgentLoop', () => {
 
   describe('error handling', () => {
     it('should handle Claude API errors gracefully', async () => {
-      mockClaude.sendMessage.mockRejectedValueOnce(new Error('API Error'));
+      mockLLM.sendMessage.mockRejectedValueOnce(new Error('API Error'));
 
       const result = await runAgentLoop(options);
 

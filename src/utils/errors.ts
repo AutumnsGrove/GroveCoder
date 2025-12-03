@@ -24,7 +24,7 @@ export class ApiError extends GroveCoderError {
   constructor(
     message: string,
     public readonly statusCode?: number,
-    public readonly provider: 'claude' | 'github' = 'claude'
+    public readonly provider: 'claude' | 'github' | 'kimi' = 'claude'
   ) {
     super(message, 'API_ERROR', statusCode !== undefined && statusCode >= 500);
     this.name = 'ApiError';
