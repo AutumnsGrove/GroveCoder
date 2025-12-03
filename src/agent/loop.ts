@@ -16,7 +16,8 @@ import type { RepoContext, PRDetails } from '../github/types.js';
 import { executeTools, getToolDefinitions, type ToolContext } from '../tools/index.js';
 import { SafetyChecker, createInitialState, updateState } from './safety.js';
 import { SYSTEM_PROMPT, buildInitialPrompt } from './prompt.js';
-import type { ParsedReview, AgentState } from './types.js';
+import type { ParsedReview, AgentState, SafetyLimits, DiffLimits } from './types.js';
+import type { GroveCoderConfig } from '../config/types.js';
 
 /** GroveCoder label constants */
 export const LABELS = {
@@ -32,6 +33,12 @@ export interface AgentLoopOptions {
   prDetails: PRDetails;
   review: ParsedReview;
   dryRun?: boolean;
+  /** Optional config-derived safety limits */
+  safetyLimits?: Partial<SafetyLimits>;
+  /** Optional config-derived diff limits */
+  diffLimits?: Partial<DiffLimits>;
+  /** Optional full config for behavior settings */
+  config?: GroveCoderConfig;
 }
 
 export interface AgentLoopResult {
@@ -42,9 +49,19 @@ export interface AgentLoopResult {
 }
 
 export async function runAgentLoop(options: AgentLoopOptions): Promise<AgentLoopResult> {
-  const { claude, github, repo, prDetails, review, dryRun = false } = options;
+  const {
+    claude,
+    github,
+    repo,
+    prDetails,
+    review,
+    dryRun = false,
+    safetyLimits,
+    diffLimits,
+    config,
+  } = options;
 
-  const safety = new SafetyChecker();
+  const safety = new SafetyChecker(safetyLimits, diffLimits);
   let state = createInitialState();
   const messages: Message[] = [];
   const fileCache = new Map<string, { content: string; sha: string }>();
@@ -64,6 +81,7 @@ export async function runAgentLoop(options: AgentLoopOptions): Promise<AgentLoop
     baseBranch: prDetails.base.ref,
     issueCount: totalIssues,
     dryRun,
+    hasCustomConfig: !!config,
   });
 
   // Pre-flight safety checks

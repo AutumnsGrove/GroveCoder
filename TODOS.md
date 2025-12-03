@@ -1,6 +1,6 @@
 # GroveCoder TODO
 
-> **Current Focus:** Phase 3 - Configuration & Polish
+> **Current Focus:** Phase 4 - Multi-Model Support (Next)
 
 ---
 
@@ -135,7 +135,7 @@
 
 ---
 
-## Phase 3: Configuration & Polish (In Progress)
+## Phase 3: Configuration & Polish ✅ COMPLETE
 
 ### Repo Config (`.github/grovecoder.yml`) ✅
 - [x] **Config schema definition**
@@ -162,9 +162,9 @@
   - User-defined protected paths
   - Glob pattern support
   - Merge with defaults
-- [ ] **Integrate config into agent loop**
-  - Load config at startup
-  - Apply to SafetyChecker
+- [x] **Integrate config into agent loop**
+  - Load config at startup in actions handler
+  - Apply to SafetyChecker via AgentLoopOptions
 
 ### Extended Tools ✅
 - [x] **`web_fetch` tool**
@@ -179,18 +179,18 @@
   - Suggested actions for humans
   - Exit agent gracefully
 
-### Documentation
-- [ ] **ARCHITECTURE.md**
+### Documentation ✅
+- [x] **ARCHITECTURE.md** (`docs/ARCHITECTURE.md`)
   - System overview diagram
   - Layer descriptions
   - Data flow explanation
   - Extension points
-- [ ] **TOOLS.md reference**
+- [x] **TOOLS.md reference** (`docs/TOOLS.md`)
   - Each tool with examples
   - Input/output schemas
   - Common use cases
   - Error handling
-- [ ] **CONTRIBUTING.md**
+- [x] **CONTRIBUTING.md** (`docs/CONTRIBUTING.md`)
   - Development setup
   - Testing guidelines
   - PR process
@@ -301,19 +301,19 @@
 
 | Phase | Total Tasks | Completed | Remaining |
 |-------|-------------|-----------|-----------|
-| 1     | 45          | 42        | 3         |
+| 1     | 45          | 42        | 3*        |
 | 2     | 15          | 13        | 2*        |
-| 3     | 15          | 8         | 7         |
+| 3     | 15          | 15        | 0         |
 | 4     | 4           | 0         | 4         |
 | 5     | 6           | 0         | 6         |
 | 6     | 4           | 0         | 4         |
 
-*\*2 test tasks deferred to Phase 3 (test repository & E2E tests)*
+*\*Remaining Phase 1/2 tasks are E2E testing (deferred)*
 
-### Phase 3 Progress
-- Config system: 6/7 complete (integration pending)
+### Phase 3 Complete
+- Config system: 7/7 complete
 - Extended tools: 2/2 complete
-- Documentation: 0/3 complete
+- Documentation: 3/3 complete
 - Test coverage: 114 tests passing
 
 ---
