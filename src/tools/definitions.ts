@@ -158,6 +158,54 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     },
   },
   {
+    name: 'web_fetch',
+    description:
+      'Fetch content from a documentation URL. Only allowed for whitelisted documentation sites (MDN, Node.js docs, TypeScript docs, etc.). Use this to look up API documentation or library references.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        url: {
+          type: 'string',
+          description: 'The URL to fetch (must be https and from an allowed documentation site)',
+        },
+      },
+      required: ['url'],
+    },
+  },
+  {
+    name: 'request_human_help',
+    description:
+      'Request help from a human when you are stuck and cannot make further progress. This will post a detailed comment explaining the blockers and add a needs-help label.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        summary: {
+          type: 'string',
+          description: 'Summary of what was attempted and why help is needed',
+        },
+        blockers: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'List of specific blockers preventing progress',
+        },
+        suggestions: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Optional suggestions for what humans could do to help',
+        },
+        issues_fixed: {
+          type: 'number',
+          description: 'Number of issues successfully fixed before getting stuck',
+        },
+        issues_remaining: {
+          type: 'number',
+          description: 'Number of issues that still need to be addressed',
+        },
+      },
+      required: ['summary', 'blockers'],
+    },
+  },
+  {
     name: 'done',
     description:
       'Signal that all fixes are complete and the remediation is finished. Call this when you have addressed all issues or when you cannot make further progress.',

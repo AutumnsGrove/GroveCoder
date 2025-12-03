@@ -11,6 +11,8 @@ import { readFile, writeFile, editFile, listDirectory, type FileOpsContext } fro
 import { runCommand, gitStatus } from './shell.js';
 import { getPrDiff, getPrComments, addPrComment, type GitHubToolsContext } from './github-api.js';
 import { searchFiles } from './search.js';
+import { webFetch } from './web-fetch.js';
+import { requestHumanHelp, type HumanHelpRequest } from './human-help.js';
 
 export { getToolDefinitions, TOOL_DEFINITIONS } from './definitions.js';
 
@@ -106,6 +108,35 @@ export async function executeTool(
       case 'add_pr_comment':
         output = await addPrComment(ghCtx, input['body'] as string);
         break;
+
+      case 'web_fetch':
+        output = await webFetch(input['url'] as string);
+        break;
+
+      case 'request_human_help': {
+        const helpRequest: HumanHelpRequest = {
+          summary: input['summary'] as string,
+          blockers: input['blockers'] as string[],
+          suggestions: input['suggestions'] as string[] | undefined,
+          issuesFixed: input['issues_fixed'] as number | undefined,
+          issuesRemaining: input['issues_remaining'] as number | undefined,
+        };
+        output = await requestHumanHelp(
+          { github: ctx.github, repo: ctx.repo, prNumber: ctx.prNumber },
+          helpRequest
+        );
+        // request_human_help is effectively a done signal
+        return {
+          success: true,
+          output,
+          isDone: true,
+          summary: {
+            issuesFixed: helpRequest.issuesFixed ?? 0,
+            issuesSkipped: helpRequest.issuesRemaining ?? 0,
+            reason: 'Requested human help',
+          },
+        };
+      }
 
       case 'done':
         return {
