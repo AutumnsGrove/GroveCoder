@@ -99,19 +99,14 @@ export async function handleActionsEvent(): Promise<void> {
   // Parse the review
   const review = parseClaudeReview(ctx.commentBody);
 
-  try {
-    validateReview(review);
-  } catch (error) {
-    logger.info('Review validation failed, skipping', {
-      error: error instanceof Error ? error.message : String(error),
-    });
-    return;
-  }
+  // Validate (now always passes - we accept all Claude reviews)
+  validateReview(review);
 
   logger.info('Parsed Claude review', {
     issueCount: review.issuesAndConcerns.length,
     recommendation: review.finalRecommendation,
     complexity: review.complexityEstimate,
+    hasRawContent: review.rawContent.length > 0,
   });
 
   // Initialize GitHub client (LLM client initialized after config load)

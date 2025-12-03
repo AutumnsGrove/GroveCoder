@@ -270,7 +270,8 @@ function estimateComplexity(issues: ReviewIssue[]): ParsedReview['complexityEsti
 }
 
 export function validateReview(review: ParsedReview): void {
-  if (review.issuesAndConcerns.length === 0 && review.recommendations.length === 0) {
-    throw new ParseError('No issues or recommendations found in review');
-  }
+  // Accept all reviews from Claude - even if we can't parse specific issues,
+  // the agent can still work with the raw content
+  // This enables fully automated fixing of any Claude review
+  return;
 }
