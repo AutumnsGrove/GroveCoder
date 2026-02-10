@@ -5,17 +5,20 @@
 ---
 
 ## Project Purpose
-[Fill in: What this project does - 1-2 sentences]
+grove-coder is an MCP server that creates a secure capability boundary between an orchestrator model (MiniMax M2.1) and a coding specialist model (DeepSeek V3.2). It enforces ZDR compliance via OpenRouter while providing cost tracking and audit logging.
 
 ## Tech Stack
-[Fill in: Technologies, frameworks, and languages used]
-- Language:
-- Framework:
-- Key Libraries:
-- Package Manager:
+- Language: Python 3.11+
+- Framework: MCP SDK (mcp>=1.0.0)
+- Key Libraries: httpx (async HTTP), sqlite3 (cost tracking)
+- Package Manager: uv
 
 ## Architecture Notes
-[Fill in: Key architectural decisions, patterns, or structure]
+- **MCP Server**: Exposes 4 tools (generate_code, edit_code, review_code, get_cost_report) over stdio
+- **DeepSeek Client**: Async HTTP client routing through OpenRouter with ZDR compliance
+- **Cost Database**: SQLite tracking all requests with token counts and costs
+- **Config**: secrets.json with environment variable overrides
+- **Security**: No file system access, no code execution, ZDR enforced, cost limits
 
 ---
 
