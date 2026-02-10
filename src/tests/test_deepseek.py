@@ -37,8 +37,8 @@ def test_calculate_cost(client):
     """Cost calculation matches DeepSeek pricing."""
     usage = {"prompt_tokens": 1_000_000, "completion_tokens": 1_000_000}
     cost = client._calculate_cost(usage)
-    # Input: $0.28/M + Output: $0.42/M = $0.70
-    assert abs(cost - 0.70) < 1e-6
+    # Input: $0.25/M + Output: $0.38/M = $0.63
+    assert abs(cost - 0.63) < 1e-6
 
 
 def test_calculate_cost_zero(client):
