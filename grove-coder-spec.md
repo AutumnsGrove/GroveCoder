@@ -251,12 +251,12 @@ class DeepSeekClient:
     
     def _calculate_cost(self, usage: dict) -> float:
         # DeepSeek V3.2 pricing via OpenRouter
-        # Input: $0.28/M, Output: $0.42/M
+        # Input: $0.25/M, Output: $0.38/M
         input_tokens = usage.get("prompt_tokens", 0)
         output_tokens = usage.get("completion_tokens", 0)
-        
-        input_cost = (input_tokens / 1_000_000) * 0.28
-        output_cost = (output_tokens / 1_000_000) * 0.42
+
+        input_cost = (input_tokens / 1_000_000) * 0.25
+        output_cost = (output_tokens / 1_000_000) * 0.38
         
         return round(input_cost + output_cost, 6)
 

@@ -1,18 +1,18 @@
-# TODOs for BaseProject
+# TODOs for grove-coder
 
-## Setup Tasks
-- [ ] Review and customize AGENT.md with project-specific details
-- [ ] Set up project dependencies (uv, pnpm, go mod, etc.)
-- [ ] Configure secrets if needed (see AgentUsage/secrets_management.md)
-- [ ] Set up pre-commit hooks (optional, see AgentUsage/pre_commit_hooks/)
-- [ ] Add initial project structure
+## Completed (Phase 0)
+- [x] Scaffold project structure with uv
+- [x] Create pyproject.toml with dependencies
+- [x] Implement config.py (secrets loader with env var overrides)
+- [x] Implement database.py (SQLite cost tracking)
+- [x] Implement deepseek.py (async DeepSeek client via OpenRouter)
+- [x] Implement server.py (MCP server with 4 tools)
+- [x] Create cost_report.py CLI script
+- [x] Set up .gitignore and secrets_template.json
 
-## Development Tasks
-- [ ] Define core features
-- [ ] Set up testing framework
-- [ ] Implement first feature
-
-## Documentation Tasks
-- [ ] Update README.md with project specifics
-- [ ] Document API/architecture decisions
-- [ ] Add usage examples
+## Future Enhancements
+- [ ] Caching layer for common code patterns
+- [ ] Quality scoring via orchestrator feedback
+- [ ] Model fallback (DeepSeek → Qwen Coder)
+- [ ] Streaming support for long code generation
+- [ ] Multi-file generation in single request

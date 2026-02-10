@@ -2,3 +2,11 @@ secrets.json
 *.log
 __pycache__/
 .DS_Store
+*.pyc
+.venv/
+dist/
+*.egg-info/
+grove_coder.db
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
